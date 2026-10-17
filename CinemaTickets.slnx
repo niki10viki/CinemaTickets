@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CinemaTickets.App/CinemaTickets.App.csproj" />
+  <Project Path="CinemaTickets.Core/CinemaTickets.Core.csproj" />
+</Solution>
