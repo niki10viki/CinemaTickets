@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CinemaTickets.Core.Domain;
 
 Screening screening = new()
@@ -20,12 +20,19 @@ TicketOrder order = new()
 
 TicketLine first = new()
 {
-    ScreeningId = screening.Id, Row = 5, Seat = 7, Price = 180.00m,
+    ScreeningId = screening.Id,
+    Row = 5,
+    Seat = 7,
+    Price = 180.00m,
 };
 
 TicketLine second = new()
 {
-    ScreeningId = screening.Id, Row = 5, Seat = 8, Price = 220.50m, Discount = 20.50m,
+    ScreeningId = screening.Id,
+    Row = 5,
+    Seat = 8,
+    Price = 220.50m,
+    Discount = 20.50m,
 };
 
 order.AddLine(first);
