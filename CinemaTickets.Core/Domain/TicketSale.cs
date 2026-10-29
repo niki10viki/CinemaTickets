@@ -5,87 +5,91 @@ using System.Linq;
 namespace CinemaTickets.Core.Domain
 {
 // клас
-public class zakaz
+public class TicketSale
 {
-public string id;
-public string cl;
-public List<string[]> ln = new List<string[]>();
-  public int st = 0;  // 0-новий,1-оплач,2-відпр,3-скасов
-public DateTime dt;
+private readonly List<string[]> _lines = new List<string[]>();
 // public string prim;   // примітка, поки не треба
 
 // конструктор
-   public zakaz(string a, string b)
+   public TicketSale(string id, string customerName)
 {
-id = a;              // ставимо id
-      cl = b;         // ставимо cl
-dt = DateTime.Now;   // ставимо дату
+Id = id;              // ставимо id
+      CustomerName = customerName;         // ставимо cl
+CreatedAt = DateTime.Now;   // ставимо дату
 }
 
+public string Id { get; private set; }
+
+public string CustomerName { get; private set; }
+
+  public int Status { get; private set; }  // 0-новий,1-оплач,2-відпр,3-скасов
+
+public DateTime CreatedAt { get; private set; }
+
 // метод додавання
-public void Add(string s, int k, decimal c)
+public void AddLine(string seatCategory, int quantity, decimal unitPrice)
 {
-string[] t = new string[3];
-   t[0] = s; t[1] = k.ToString(); t[2] = c.ToString();
-ln.Add(t);   // додаємо t у ln
+string[] line = new string[3];
+   line[0] = seatCategory; line[1] = quantity.ToString(); line[2] = unitPrice.ToString();
+_lines.Add(line);   // додаємо t у ln
 }
 
 // ProcessData
-public decimal ProcessData(bool f)
+public decimal CalculateTotal(bool isRegularCustomer)
 {
-decimal sum1 = 0; int kolvo = 0;
-for (int i = 0; i < ln.Count; i++)
+decimal total = 0; int lineCount = 0;
+for (int i = 0; i < _lines.Count; i++)
 {
-int k = int.Parse(ln[i][1]);
-   decimal c = decimal.Parse(ln[i][2]);
-sum1 = sum1 + k * c;   // додаємо до суми
-kolvo = kolvo + 1;     // збільшуємо kolvo на одиницю
+int quantity = int.Parse(_lines[i][1]);
+   decimal unitPrice = decimal.Parse(_lines[i][2]);
+total = total + quantity * unitPrice;   // додаємо до суми
+lineCount = lineCount + 1;     // збільшуємо kolvo на одиницю
 }
 // if (sum1 > 500) { sum1 = sum1 - 50; } // стара знижка
 
-if (f == true && sum1 > 1000) { sum1 = sum1 * 0.9m; } else if (sum1 > 5000) { sum1 = sum1 * 0.85m; } else { sum1 = sum1; }
-if (kolvo > 10) sum1 = sum1 - 100;
-  if (sum1 < 0) sum1 = 0;
-sum1 = sum1 + sum1 * 0.2m;
-return Math.Round(sum1, 2);   // повертаємо sum1
+if (isRegularCustomer == true && total > 1000) { total = total * 0.9m; } else if (total > 5000) { total = total * 0.85m; } else { total = total; }
+if (lineCount > 10) total = total - 100;
+  if (total < 0) total = 0;
+total = total + total * 0.2m;
+return Math.Round(total, 2);   // повертаємо sum1
 }
 
 // міняємо статус
-public bool Chg(int n)
+public bool TryChangeStatus(int newStatus)
 {
-if (st == 0 && n == 1) { st = 1; return true; }
-   if (st == 1 && n == 2) { st = 2; return true; }
-if (st == 0 && n == 3) { st = 3; return true; }
+if (Status == 0 && newStatus == 1) { Status = 1; return true; }
+   if (Status == 1 && newStatus == 2) { Status = 2; return true; }
+if (Status == 0 && newStatus == 3) { Status = 3; return true; }
 return false;   // не можна
 }
 
 // перевірка
-public bool Ck()
+public bool IsValid()
 {
-if (id != null && id != "" && cl != null && cl.Length > 2 && ln.Count > 0 && ln.Count < 100 && st >= 0 && st <= 3)
+if (Id != null && Id != "" && CustomerName != null && CustomerName.Length > 2 && _lines.Count > 0 && _lines.Count < 100 && Status >= 0 && Status <= 3)
 return true;
 else
 return false;
 }
 
 // звіт
-public string Rep()
+public string BuildReport()
 {
-string s = "";
-for (int i = 0; i < ln.Count; i++)
+string report = "";
+for (int i = 0; i < _lines.Count; i++)
 {
-s = s + "Категорія: " + ln[i][0] + "; кількість: " + ln[i][1] + "; ціна: " + ln[i][2] + "; сума: " + (int.Parse(ln[i][1]) * decimal.Parse(ln[i][2])) + "\n";
+report = report + "Категорія: " + _lines[i][0] + "; кількість: " + _lines[i][1] + "; ціна: " + _lines[i][2] + "; сума: " + (int.Parse(_lines[i][1]) * decimal.Parse(_lines[i][2])) + "\n";
 }
-s = s + "Разом: " + ProcessData(false) + "\n";
-return s;   // повертаємо s
+report = report + "Разом: " + CalculateTotal(false) + "\n";
+return report;   // повертаємо s
 }
 
 // пошук
-public static zakaz F(List<zakaz> L, string x)
+public static TicketSale FindById(List<TicketSale> sales, string saleId)
 {
-for (int i = 0; i < L.Count; i++)
+for (int i = 0; i < sales.Count; i++)
 {
-if (L[i].id == x) { return L[i]; }
+if (sales[i].Id == saleId) { return sales[i]; }
 }
 return null;
 }
