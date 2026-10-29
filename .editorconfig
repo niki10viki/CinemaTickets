@@ -24,6 +24,16 @@ dotnet_sort_system_directives_first = true
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_var_for_built_in_types = false:suggestion
 
+# іменування: константи в PascalCase; правило з модифікатором const
+# конкретніше за правило для полів, тому діє першим
+dotnet_naming_rule.const_pascal.symbols = const_field
+dotnet_naming_rule.const_pascal.style = pascal_case
+dotnet_naming_rule.const_pascal.severity = warning
+dotnet_naming_symbols.const_field.applicable_kinds = field
+dotnet_naming_symbols.const_field.applicable_accessibilities = *
+dotnet_naming_symbols.const_field.required_modifiers = const
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
 # іменування: приватні поля з підкресленням
 dotnet_naming_rule.priv_underscore.symbols = priv_field
 dotnet_naming_rule.priv_underscore.style = underscore_camel
@@ -36,19 +46,27 @@ dotnet_naming_style.underscore_camel.required_prefix = _
 # StyleCop: свідомо вимкнені правила
 # заголовок з ліцензією в навчальному проекті не потрібен
 dotnet_diagnostic.SA1633.severity = none
+# using поза namespace: так вимагає файловий namespace і шаблони .NET
+dotnet_diagnostic.SA1200.severity = none
 # префікс this. суперечить конвенції .NET
 dotnet_diagnostic.SA1101.severity = none
 # приватні поля іменуємо з _, як прийнято в .NET
 dotnet_diagnostic.SA1309.severity = none
-# XML-документацію вимагатимемо з ЛР № 4, поки що ні
+# XML-коментарі перевіряє компілятор (GenerateDocumentationFile, CS1591);
+# у консольному застосунку публічного API немає, тож файл документації не генеруємо
 dotnet_diagnostic.SA0001.severity = none
-dotnet_diagnostic.SA1600.severity = none
-dotnet_diagnostic.SA1601.severity = none
-dotnet_diagnostic.SA1602.severity = none
+# документацію пишемо українською, а правила вимагають англійських шаблонів
+# «Gets or sets…» і «Initializes a new instance…»
+dotnet_diagnostic.SA1623.severity = none
+dotnet_diagnostic.SA1642.severity = none
 # кома в кінці багаторядкового ініціалізатора необов'язкова
 dotnet_diagnostic.SA1413.severity = none
 
 # правила, які лишаємо суворими
+dotnet_diagnostic.SA1503.severity = warning
+dotnet_diagnostic.SA1600.severity = warning
+dotnet_diagnostic.SA1601.severity = warning
+dotnet_diagnostic.SA1602.severity = warning
 dotnet_diagnostic.SA1201.severity = warning
 dotnet_diagnostic.SA1516.severity = warning
 dotnet_diagnostic.IDE0055.severity = warning
