@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace CinemaTickets.Core.Domain;
 
 /// <summary>
@@ -76,7 +78,7 @@ public class TicketSale
     /// <param name="sales">Список продажів, у якому виконується пошук.</param>
     /// <param name="saleId">Ідентифікатор шуканого продажу.</param>
     /// <returns>Знайдений продаж або null, якщо продажу з таким ідентифікатором немає.</returns>
-    public static TicketSale FindById(List<TicketSale> sales, string saleId)
+    public static TicketSale? FindById(List<TicketSale> sales, string saleId)
     {
         for (int i = 0; i < sales.Count; i++)
         {
@@ -99,8 +101,8 @@ public class TicketSale
     {
         string[] line = new string[3];
         line[0] = seatCategory;
-        line[1] = quantity.ToString();
-        line[2] = unitPrice.ToString();
+        line[1] = quantity.ToString(CultureInfo.CurrentCulture);
+        line[2] = unitPrice.ToString(CultureInfo.CurrentCulture);
         _lines.Add(line);
     }
 
@@ -115,8 +117,8 @@ public class TicketSale
         int lineCount = 0;
         for (int i = 0; i < _lines.Count; i++)
         {
-            int quantity = int.Parse(_lines[i][1]);
-            decimal unitPrice = decimal.Parse(_lines[i][2]);
+            int quantity = int.Parse(_lines[i][1], CultureInfo.CurrentCulture);
+            decimal unitPrice = decimal.Parse(_lines[i][2], CultureInfo.CurrentCulture);
             total += quantity * unitPrice;
             lineCount++;
         }
@@ -181,7 +183,7 @@ public class TicketSale
     public bool IsValid()
     {
         if (Id != null
-            && Id != ""
+            && Id != string.Empty
             && CustomerName != null
             && CustomerName.Length >= MinCustomerNameLength
             && _lines.Count > 0
@@ -201,13 +203,15 @@ public class TicketSale
     /// <returns>Багаторядковий звіт; кожен рядок завершується символом нового рядка.</returns>
     public string BuildReport()
     {
-        string report = "";
+        string report = string.Empty;
         for (int i = 0; i < _lines.Count; i++)
         {
+            int quantity = int.Parse(_lines[i][1], CultureInfo.CurrentCulture);
+            decimal unitPrice = decimal.Parse(_lines[i][2], CultureInfo.CurrentCulture);
             report = report + "Категорія: " + _lines[i][0]
                 + "; кількість: " + _lines[i][1]
                 + "; ціна: " + _lines[i][2]
-                + "; сума: " + (int.Parse(_lines[i][1]) * decimal.Parse(_lines[i][2]))
+                + "; сума: " + (quantity * unitPrice)
                 + "\n";
         }
 
