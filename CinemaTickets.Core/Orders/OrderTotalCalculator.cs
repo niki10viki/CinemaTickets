@@ -8,59 +8,24 @@ namespace CinemaTickets.Core.Orders;
 public static class OrderTotalCalculator
 {
     /// <summary>
-    /// Рахує замовлення: перевіряє вхід, застосовує знижки й збір, визначає новий стан.
+    /// Рахує суму замовлення та наступний стан; нічого не змінює й не друкує.
     /// </summary>
-    /// <param name="orderId">Номер замовлення.</param>
-    /// <param name="viewerName">Ім'я глядача.</param>
-    /// <param name="viewerEmail">Пошта глядача.</param>
-    /// <param name="isRegular">Ознака постійного глядача.</param>
-    /// <param name="lines">Рядки замовлення.</param>
-    /// <param name="createdAt">Дата створення замовлення.</param>
-    /// <param name="couponCode">Промокод або порожній рядок.</param>
-    /// <param name="status">Поточний стан замовлення.</param>
-    /// <param name="printToConsole">Чи друкувати звіт у консоль.</param>
-    /// <param name="serviceFee">Сервісний збір для невеликих замовлень, грн.</param>
-    /// <param name="newStatus">Стан замовлення після розрахунку.</param>
-    /// <returns>Сума до сплати, заокруглена до двох знаків.</returns>
-    public static decimal Process(
-        int orderId,
-        string viewerName,
-        string viewerEmail,
-        bool isRegular,
-        IReadOnlyList<SeatLine> lines,
-        DateOnly createdAt,
-        string couponCode,
-        TicketStatus status,
-        bool printToConsole,
-        decimal serviceFee,
-        out TicketStatus newStatus)
+    /// <param name="request">Запит на розрахунок замовлення.</param>
+    /// <returns>Сума до сплати, заокруглена до двох знаків, і новий стан замовлення.</returns>
+    /// <exception cref="ArgumentException">Запит порушує передумови розрахунку.</exception>
+    public static TotalResult Calculate(TotalRequest request)
     {
-        OrderGuards.EnsureHeaderValid(orderId, viewerName, viewerEmail);
-        decimal total = SubtotalOf(lines);
-        total -= ViewerDiscountOf(total, isRegular);
+        OrderGuards.EnsureRequestValid(request);
+        decimal total = SubtotalOf(request.Lines);
+        total -= ViewerDiscountOf(total, request.Viewer.IsRegular);
         total -= VolumeDiscountOf(total);
-        total -= CouponDiscountOf(total, couponCode);
-        total -= SundayDiscountOf(total, createdAt);
-        total += ServiceFeeOf(total, serviceFee);
-        total = status == TicketStatus.Cancelled
+        total -= CouponDiscountOf(total, request.CouponCode);
+        total -= SundayDiscountOf(total, request.CreatedAt);
+        total += ServiceFeeOf(total, request.ServiceFee);
+        total = request.Status == TicketStatus.Cancelled
             ? 0m
             : Math.Round(Math.Max(total, 0m), 2);
-        newStatus = NextStatusOf(status, total);
-        if (printToConsole)
-        {
-            Console.WriteLine("Замовлення № " + orderId);
-            Console.WriteLine("Глядач: " + viewerName);
-            Console.WriteLine("Пошта: " + viewerEmail);
-            foreach (SeatLine line in lines)
-            {
-                Console.WriteLine(line.SeatCategory + " x " + line.Quantity);
-            }
-
-            Console.WriteLine("Разом: " + total);
-            Console.WriteLine("Стан: " + newStatus);
-        }
-
-        return total;
+        return new TotalResult(total, NextStatusOf(request.Status, total));
     }
 
     /// <summary>

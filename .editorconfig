@@ -71,21 +71,6 @@ dotnet_diagnostic.SA1201.severity = warning
 dotnet_diagnostic.SA1516.severity = warning
 dotnet_diagnostic.IDE0055.severity = warning
 
-# ЛР3: успадкований метод-монстр зберігається в первісному вигляді як точка відліку
-# для метрик «до»; аналізатори для нього вимкнено, теку Legacy видаляє завдання 5
-[CinemaTickets.Core/Legacy/*.cs]
-dotnet_analyzer_diagnostic.severity = none
-dotnet_diagnostic.CS1591.severity = none
-dotnet_diagnostic.IDE0011.severity = none
-dotnet_diagnostic.IDE0055.severity = none
-dotnet_diagnostic.SA1201.severity = none
-dotnet_diagnostic.SA1503.severity = none
-dotnet_diagnostic.SA1516.severity = none
-dotnet_diagnostic.SA1600.severity = none
-dotnet_diagnostic.SA1601.severity = none
-dotnet_diagnostic.SA1602.severity = none
-dotnet_diagnostic.CA1847.severity = none
-
 # тести називаються за схемою Метод_Сценарій_Результат, тому підкреслення в іменах свідомі
 [CinemaTickets.Tests/*.cs]
 dotnet_diagnostic.CA1707.severity = none

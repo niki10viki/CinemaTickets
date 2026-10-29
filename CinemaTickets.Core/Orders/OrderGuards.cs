@@ -25,6 +25,22 @@ internal static class OrderGuards
     }
 
     /// <summary>
+    /// Перевіряє весь запит на розрахунок: реквізити, рядки та сервісний збір.
+    /// </summary>
+    /// <param name="request">Запит на розрахунок замовлення.</param>
+    /// <exception cref="ArgumentNullException">Запит або глядача не передано.</exception>
+    /// <exception cref="ArgumentException">Реквізити чи рядки замовлення некоректні.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Сервісний збір від'ємний.</exception>
+    public static void EnsureRequestValid(TotalRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Viewer);
+        EnsureHeaderValid(request.OrderId, request.Viewer.Name, request.Viewer.Email);
+        EnsureLinesValid(request.Lines);
+        ArgumentOutOfRangeException.ThrowIfNegative(request.ServiceFee);
+    }
+
+    /// <summary>
     /// Перевіряє один рядок замовлення.
     /// </summary>
     /// <param name="line">Рядок із категорією місць, кількістю та ціною.</param>
