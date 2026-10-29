@@ -5,14 +5,19 @@ public sealed class TicketOrder
 {
     private readonly List<TicketLine> _lines = new();
 
+    /// <summary>Ідентифікатор замовлення.</summary>
     public int Id { get; init; }
 
+    /// <summary>Ідентифікатор глядача, який оформив замовлення.</summary>
     public int ViewerId { get; init; }
 
+    /// <summary>Поточний стан замовлення.</summary>
     public TicketStatus Status { get; set; } = TicketStatus.New;
 
+    /// <summary>Дата й час створення замовлення.</summary>
     public DateTimeOffset CreatedAt { get; init; }
 
+    /// <summary>Рядки замовлення (лише для читання).</summary>
     public IReadOnlyList<TicketLine> Lines => _lines;
 
     /// <summary>Додає рядок із квитком до замовлення.</summary>
