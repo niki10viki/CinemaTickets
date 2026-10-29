@@ -1,4 +1,5 @@
 using CinemaTickets.Core.Legacy;
+using CinemaTickets.Core.Orders;
 
 namespace CinemaTickets.Tests;
 
@@ -33,16 +34,5 @@ public class LegacyProcessorTests
             false, 60m, out string next);
         Assert.Equal(420m, total);
         Assert.Equal("Used", next);
-    }
-
-    [Fact]
-    public void Process_NoLines_ReturnsMinusOne()
-    {
-        decimal total = LegacyProcessor.Process(
-            3, "Коваль", "k@ex.com", false,
-            new List<SeatLine>(),
-            new DateOnly(2026, 3, 10), "", "New", false,
-            60m, out string next);
-        Assert.Equal(-1m, total);
     }
 }

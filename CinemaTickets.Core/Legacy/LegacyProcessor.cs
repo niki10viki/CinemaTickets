@@ -1,3 +1,5 @@
+using CinemaTickets.Core.Orders;
+
 namespace CinemaTickets.Core.Legacy;
 
 public static class LegacyProcessor

@@ -15,4 +15,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CinemaTickets.Tests" />
+  </ItemGroup>
+
 </Project>
