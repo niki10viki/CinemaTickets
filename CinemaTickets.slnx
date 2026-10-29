@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="CinemaTickets.App/CinemaTickets.App.csproj" />
   <Project Path="CinemaTickets.Core/CinemaTickets.Core.csproj" />
+  <Project Path="CinemaTickets.Tests/CinemaTickets.Tests.csproj" />
 </Solution>
