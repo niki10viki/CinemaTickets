@@ -1,7 +1,11 @@
 using System.Text;
+using CinemaTickets.Core.Abstractions;
 using CinemaTickets.Core.Domain;
 using CinemaTickets.Core.Orders;
+using CinemaTickets.Core.Pricing;
 using CinemaTickets.Core.Reporting;
+using CinemaTickets.Core.Services;
+using CinemaTickets.Core.Storage;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -19,6 +23,18 @@ TotalRequest request = BuildDemoRequest();
 TotalResult result = OrderTotalCalculator.Calculate(request);
 string report = OrderReport.TextOf(request, result);
 new OrderReportPrinter(Console.Out).Print(report);
+
+// ЛР4: композиційний корінь — єдине місце, де створюються конкретні реалізації
+var ticketRepository = new InMemoryTicketOrderRepository();
+IPricingPolicy ticketPricing = new DiscountPricingPolicy(0.05m);
+var ticketService = new TicketOrderService(ticketRepository, ticketPricing);
+
+var ticketOrder = new TicketOrder(1, 100, DateTimeOffset.Now);
+ticketOrder.AddLine(new TicketLine(screeningId: 1, row: 5, seat: 7, price: 250m));
+ticketOrder.AddLine(new TicketLine(screeningId: 1, row: 5, seat: 8, price: 250m));
+ticketService.Place(ticketOrder);
+
+Console.WriteLine($"Сума: {ticketService.TotalOf(ticketOrder):0.00}");
 
 static TotalRequest BuildDemoRequest() => new(
     OrderId: 1,
