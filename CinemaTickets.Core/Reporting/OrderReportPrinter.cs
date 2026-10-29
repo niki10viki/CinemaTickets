@@ -10,7 +10,7 @@ public sealed class OrderReportPrinter
     /// <summary>
     /// Створює принтер, що пише в заданий потік.
     /// </summary>
-    /// <param name="output">Потік виводу: стандартний вивід застосунку або StringWriter у тесті.</param>
+    /// <param name="output">Потік виводу: вивід застосунку або StringWriter.</param>
     /// <exception cref="ArgumentNullException">Потік не передано.</exception>
     public OrderReportPrinter(TextWriter output)
     {
