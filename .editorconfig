@@ -70,3 +70,7 @@ dotnet_diagnostic.SA1602.severity = warning
 dotnet_diagnostic.SA1201.severity = warning
 dotnet_diagnostic.SA1516.severity = warning
 dotnet_diagnostic.IDE0055.severity = warning
+
+# тести називаються за схемою Метод_Сценарій_Результат, тому підкреслення в іменах свідомі
+[CinemaTickets.Tests/*.cs]
+dotnet_diagnostic.CA1707.severity = none
