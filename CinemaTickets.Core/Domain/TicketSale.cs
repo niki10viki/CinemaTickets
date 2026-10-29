@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace CinemaTickets.Core.Domain;
 
 /// <summary>
@@ -9,9 +5,46 @@ namespace CinemaTickets.Core.Domain;
 /// </summary>
 public class TicketSale
 {
-    private readonly List<string[]> _lines = new List<string[]>();
+    /// <summary>Ставка податку на додану вартість.</summary>
+    private const decimal VatRate = 0.2m;
 
-    // public string prim;   // примітка, поки не треба
+    /// <summary>Поріг суми для знижки постійному покупцю.</summary>
+    private const decimal RegularDiscountThreshold = 1000m;
+
+    /// <summary>Частка знижки постійному покупцю.</summary>
+    private const decimal RegularDiscountRate = 0.10m;
+
+    /// <summary>Поріг суми для знижки на великий продаж.</summary>
+    private const decimal LargeOrderThreshold = 5000m;
+
+    /// <summary>Частка знижки на великий продаж.</summary>
+    private const decimal LargeOrderDiscountRate = 0.15m;
+
+    /// <summary>Кількість рядків, після якої діє гуртова знижка.</summary>
+    private const int BulkLineCount = 10;
+
+    /// <summary>Сума гуртової знижки, грн.</summary>
+    private const decimal BulkDiscountAmount = 100m;
+
+    /// <summary>Межа кількості рядків у продажу (не включно).</summary>
+    private const int MaxLineCount = 100;
+
+    /// <summary>Найкоротше допустиме ім'я покупця.</summary>
+    private const int MinCustomerNameLength = 3;
+
+    /// <summary>Стан «новий»: продаж створено, але не оплачено.</summary>
+    private const int StatusNew = 0;
+
+    /// <summary>Стан «оплачений».</summary>
+    private const int StatusPaid = 1;
+
+    /// <summary>Стан «використаний»: квитки погашено на сеансі.</summary>
+    private const int StatusUsed = 2;
+
+    /// <summary>Стан «скасований».</summary>
+    private const int StatusCancelled = 3;
+
+    private readonly List<string[]> _lines = new List<string[]>();
 
     /// <summary>
     /// Створює новий продаж квитків для покупця.
@@ -31,8 +64,8 @@ public class TicketSale
     /// <summary>Ім'я покупця квитків.</summary>
     public string CustomerName { get; private set; }
 
-    /// <summary>Поточний стан продажу.</summary>
-    public int Status { get; private set; } // 0-новий,1-оплач,2-відпр,3-скасов
+    /// <summary>Поточний стан продажу: одна з констант StatusNew … StatusCancelled.</summary>
+    public int Status { get; private set; }
 
     /// <summary>Дата й час створення продажу.</summary>
     public DateTime CreatedAt { get; private set; }
@@ -84,29 +117,23 @@ public class TicketSale
         {
             int quantity = int.Parse(_lines[i][1]);
             decimal unitPrice = decimal.Parse(_lines[i][2]);
-            total = total + quantity * unitPrice;
-            lineCount = lineCount + 1;
+            total += quantity * unitPrice;
+            lineCount++;
         }
-
-        // if (sum1 > 500) { sum1 = sum1 - 50; } // стара знижка
 
         // знижки взаємовиключні: діє лише перша з підходящих
-        if (isRegularCustomer == true && total > 1000)
+        if (isRegularCustomer && total > RegularDiscountThreshold)
         {
-            total = total * 0.9m;
+            total *= 1m - RegularDiscountRate;
         }
-        else if (total > 5000)
+        else if (total > LargeOrderThreshold)
         {
-            total = total * 0.85m;
-        }
-        else
-        {
-            total = total;
+            total *= 1m - LargeOrderDiscountRate;
         }
 
-        if (lineCount > 10)
+        if (lineCount > BulkLineCount)
         {
-            total = total - 100;
+            total -= BulkDiscountAmount;
         }
 
         if (total < 0)
@@ -115,7 +142,7 @@ public class TicketSale
         }
 
         // ПДВ нараховується на суму вже після всіх знижок
-        total = total + total * 0.2m;
+        total += total * VatRate;
         return Math.Round(total, 2);
     }
 
@@ -126,21 +153,21 @@ public class TicketSale
     /// <returns>true, якщо перехід виконано; false, якщо він заборонений.</returns>
     public bool TryChangeStatus(int newStatus)
     {
-        if (Status == 0 && newStatus == 1)
+        if (Status == StatusNew && newStatus == StatusPaid)
         {
-            Status = 1;
+            Status = StatusPaid;
             return true;
         }
 
-        if (Status == 1 && newStatus == 2)
+        if (Status == StatusPaid && newStatus == StatusUsed)
         {
-            Status = 2;
+            Status = StatusUsed;
             return true;
         }
 
-        if (Status == 0 && newStatus == 3)
+        if (Status == StatusNew && newStatus == StatusCancelled)
         {
-            Status = 3;
+            Status = StatusCancelled;
             return true;
         }
 
@@ -156,11 +183,11 @@ public class TicketSale
         if (Id != null
             && Id != ""
             && CustomerName != null
-            && CustomerName.Length > 2
+            && CustomerName.Length >= MinCustomerNameLength
             && _lines.Count > 0
-            && _lines.Count < 100
-            && Status >= 0
-            && Status <= 3)
+            && _lines.Count < MaxLineCount
+            && Status >= StatusNew
+            && Status <= StatusCancelled)
         {
             return true;
         }
