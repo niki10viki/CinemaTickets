@@ -1,6 +1,7 @@
 using System.Text;
 using CinemaTickets.Core.Domain;
 using CinemaTickets.Core.Orders;
+using CinemaTickets.Core.Reporting;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -16,7 +17,8 @@ Console.Write(sale.BuildReport());
 
 TotalRequest request = BuildDemoRequest();
 TotalResult result = OrderTotalCalculator.Calculate(request);
-Console.WriteLine(result.Total);
+string report = OrderReport.TextOf(request, result);
+new OrderReportPrinter(Console.Out).Print(report);
 
 static TotalRequest BuildDemoRequest() => new(
     OrderId: 1,
