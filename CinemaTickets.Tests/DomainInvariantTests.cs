@@ -3,6 +3,7 @@ using CinemaTickets.Core.Domain;
 using CinemaTickets.Core.Pricing;
 using CinemaTickets.Core.Services;
 using CinemaTickets.Core.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CinemaTickets.Tests;
 
@@ -32,7 +33,8 @@ public class DomainInvariantTests
         TicketOrderService service = new(
             new InMemoryTicketOrderRepository(),
             new DiscountPricingPolicy(0.10m),
-            new SilentNotifier());
+            new SilentNotifier(),
+            NullLogger<TicketOrderService>.Instance);
         TicketOrder order = NewOrder(2);
         order.AddLine(new TicketLine(screeningId: 1, row: 5, seat: 7, price: 250m));
         order.AddLine(new TicketLine(screeningId: 1, row: 5, seat: 8, price: 250m));

@@ -3,6 +3,7 @@ using CinemaTickets.Core.Abstractions;
 using CinemaTickets.Core.Domain;
 using CinemaTickets.Core.Errors;
 using CinemaTickets.Core.Reporting;
+using Microsoft.Extensions.Logging;
 
 namespace CinemaTickets.Core.Services;
 
@@ -14,6 +15,7 @@ public sealed class TicketOrderService
     private readonly ITicketOrderRepository _repository;
     private readonly IPricingPolicy _pricing;
     private readonly INotifier _notifier;
+    private readonly ILogger<TicketOrderService> _log;
 
     /// <summary>
     /// Створює сервіс із переданими залежностями; сам нічого не створює.
@@ -21,15 +23,18 @@ public sealed class TicketOrderService
     /// <param name="repository">Сховище замовлень.</param>
     /// <param name="pricing">Політика ціноутворення.</param>
     /// <param name="notifier">Сповіщувач глядачів.</param>
+    /// <param name="log">Журнал сервісу; ядро не пише в консоль саме.</param>
     /// <exception cref="ArgumentNullException">Залежність не передано.</exception>
     public TicketOrderService(
         ITicketOrderRepository repository,
         IPricingPolicy pricing,
-        INotifier notifier)
+        INotifier notifier,
+        ILogger<TicketOrderService> log)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _pricing = pricing ?? throw new ArgumentNullException(nameof(pricing));
         _notifier = notifier ?? throw new ArgumentNullException(nameof(notifier));
+        _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
     /// <summary>
@@ -41,6 +46,8 @@ public sealed class TicketOrderService
     {
         ArgumentNullException.ThrowIfNull(order);
         _repository.Add(order);
+        _log.LogInformation(
+            "Замовлення {OrderId} оформлено, квитків {Count}", order.Id, order.Lines.Count);
         _notifier.Notify(
             order.ViewerId,
             string.Create(
@@ -60,6 +67,9 @@ public sealed class TicketOrderService
     public void AddLine(int orderId, TicketLine line)
     {
         ArgumentNullException.ThrowIfNull(line);
+        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", orderId);
+        _log.LogDebug(
+            "Додавання місця {Row}/{Seat}, ціна {Price}", line.Row, line.Seat, line.Price);
         TicketOrder order = Find(orderId);
         if (order.Status != TicketStatus.New)
         {
@@ -72,12 +82,15 @@ public sealed class TicketOrderService
             l => l.ScreeningId == line.ScreeningId && l.Row == line.Row && l.Seat == line.Seat);
         if (seatTaken)
         {
+            _log.LogWarning(
+                "Місце {Row}/{Seat} уже є в замовленні, відхилено", line.Row, line.Seat);
             throw new DomainRuleException(
                 "seat.taken",
                 Text($"Місце {line.Row}/{line.Seat} уже є в замовленні {orderId}"));
         }
 
         order.AddLine(line);
+        _log.LogInformation("Додано місце {Row}/{Seat}", line.Row, line.Seat);
     }
 
     /// <summary>
@@ -86,10 +99,12 @@ public sealed class TicketOrderService
     /// <param name="orderId">Номер замовлення.</param>
     /// <param name="amount">Внесена сума, грн.</param>
     /// <exception cref="DomainRuleException">
-    /// Замовлення немає, воно не нове або внесено менше, ніж треба.
+    /// Замовлення немає, воно не нове, порожнє або внесено менше, ніж треба.
     /// </exception>
     public void Pay(int orderId, decimal amount)
     {
+        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", orderId);
+        _log.LogDebug("Початок оплати, внесено {Amount}", amount);
         TicketOrder order = Find(orderId);
         if (order.Status != TicketStatus.New)
         {
@@ -101,12 +116,32 @@ public sealed class TicketOrderService
         decimal total = TotalOf(order);
         if (amount < total)
         {
+            _log.LogWarning("Оплату відхилено: внесено {Amount}, треба {Total}", amount, total);
             throw new DomainRuleException(
                 "order.amount",
                 Text($"Сплачено {amount:0.00}, треба {total:0.00}"));
         }
 
-        order.Pay();
+        if (amount > total)
+        {
+            _log.LogWarning("Переплата {Extra}, касир видає решту", amount - total);
+        }
+
+        try
+        {
+            order.Pay();
+        }
+        catch (InvalidOperationException ex)
+        {
+            // діалог не пускає до оплати порожнє замовлення, тож це дефект коду, що викликає сервіс
+            _log.LogError(ex, "До оплати дійшло замовлення без квитків");
+            throw new DomainRuleException(
+                "order.empty",
+                Text($"Замовлення {orderId} не містить квитків"),
+                ex);
+        }
+
+        _log.LogInformation("Оплачено {Total}, стан {Status}", total, order.Status);
     }
 
     /// <summary>
@@ -127,14 +162,17 @@ public sealed class TicketOrderService
     /// </exception>
     public void Cancel(int orderId, string reason)
     {
+        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", orderId);
         TicketOrder order = Find(orderId);
         try
         {
             order.Cancel();
+            _log.LogInformation("Замовлення скасовано, причина: {Reason}", reason);
         }
         catch (InvalidOperationException ex)
         {
             // перехоплюємо лише очікуваний виняток і загортаємо його, зберігаючи першопричину
+            _log.LogWarning(ex, "Скасування відхилено, стан {Status}", order.Status);
             throw new DomainRuleException(
                 "order.cancellable",
                 Text($"Замовлення {orderId} у стані {order.Status} не можна скасувати"),

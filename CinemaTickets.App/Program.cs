@@ -8,44 +8,64 @@ using CinemaTickets.Core.Pricing;
 using CinemaTickets.Core.Reporting;
 using CinemaTickets.Core.Services;
 using CinemaTickets.Core.Storage;
+using Microsoft.Extensions.Logging;
 
 Console.OutputEncoding = Encoding.UTF8;
+bool dialog = args.Length > 0 && args[0] == "order";
+
+// журнал іде в потік помилок, щоб не змішуватися з діалогом у стандартному виводі
+using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.AddSimpleConsole(options =>
+    {
+        options.TimestampFormat = "HH:mm:ss ";
+        options.IncludeScopes = true;
+    });
+    builder.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
+
+    // у діалозі видно всі рівні; демонстрації ЛР2–ЛР4 бачать лише попередження й збої
+    builder.SetMinimumLevel(dialog ? LogLevel.Debug : LogLevel.Warning);
+});
+ILogger log = loggerFactory.CreateLogger("CinemaTickets.App");
 
 // єдине місце, де перехоплюється будь-який виняток: користувач бачить повідомлення,
-// а оболонка — код завершення (1 — порушено правило, 2 — непередбачена помилка)
+// а оболонка — код завершення (1 — порушено правило, 2 — непередбачений збій)
 try
 {
-    if (args.Length > 0 && args[0] == "order")
+    if (dialog)
     {
-        RunOrderDialog();
+        RunOrderDialog(loggerFactory);
     }
     else
     {
-        RunDemos();
+        RunDemos(loggerFactory);
     }
 
     return 0;
 }
 catch (DomainRuleException ex)
 {
-    Console.Error.WriteLine($"Порушено правило {ex.Rule}: {ex.Message}");
+    log.LogWarning("Правило {Rule}: {Message}", ex.Rule, ex.Message);
+    Console.Error.WriteLine(ex.Message);
     return 1;
 }
 catch (Exception ex)
 {
-    Console.Error.WriteLine($"Непередбачена помилка: {ex.Message}");
+    log.LogCritical(ex, "Непередбачений збій");
+    Console.Error.WriteLine("Внутрішня помилка, застосунок зупинено");
     return 2;
 }
 
 // ЛР5: діалог оформлення замовлення; помилки введення не зупиняють застосунок
-static void RunOrderDialog()
+static void RunOrderDialog(ILoggerFactory loggerFactory)
 {
     Console.InputEncoding = Encoding.UTF8;
     var repository = new InMemoryTicketOrderRepository();
     var service = new TicketOrderService(
         repository,
         new DiscountPricingPolicy(0.05m),
-        new ConsoleNotifier());
+        new ConsoleNotifier(),
+        loggerFactory.CreateLogger<TicketOrderService>());
 
     var order = new TicketOrder(7, 100, DateTimeOffset.Now);
     repository.Add(order);
@@ -54,7 +74,7 @@ static void RunOrderDialog()
 }
 
 // демонстрації лабораторних робіт № 2–4
-static void RunDemos()
+static void RunDemos(ILoggerFactory loggerFactory)
 {
     var sale = new TicketSale("A-1001", "Іваненко");
     sale.AddLine("STANDARD", 3, 250m);
@@ -74,6 +94,7 @@ static void RunDemos()
     // ЛР4: композиційний корінь — єдине місце, де створюються конкретні реалізації
     var ticketRepository = new InMemoryTicketOrderRepository();
     INotifier notifier = new ConsoleNotifier();
+    ILogger<TicketOrderService> serviceLog = loggerFactory.CreateLogger<TicketOrderService>();
 
     // таблиця відповідності замість ланцюга if: новий тип глядача — новий рядок і новий клас
     var policies = new Dictionary<string, IPricingPolicy>
@@ -88,7 +109,8 @@ static void RunDemos()
             ? found
             : new StandardPricingPolicy();
 
-    var ticketService = new TicketOrderService(ticketRepository, PolicyFor("loyalty"), notifier);
+    var ticketService =
+        new TicketOrderService(ticketRepository, PolicyFor("loyalty"), notifier, serviceLog);
 
     var ticketOrder = new TicketOrder(1, 100, DateTimeOffset.Now);
     ticketOrder.AddLine(new TicketLine(screeningId: 1, row: 5, seat: 7, price: 250m));
@@ -99,7 +121,7 @@ static void RunDemos()
     foreach (string viewerType in new[] { "student", "staff", "guest" })
     {
         var pricedService =
-            new TicketOrderService(ticketRepository, PolicyFor(viewerType), notifier);
+            new TicketOrderService(ticketRepository, PolicyFor(viewerType), notifier, serviceLog);
         Console.WriteLine($"{viewerType}: {pricedService.TotalOf(ticketOrder):0.00}");
     }
 
