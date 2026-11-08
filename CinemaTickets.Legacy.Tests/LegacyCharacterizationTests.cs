@@ -33,7 +33,7 @@ public class LegacyCharacterizationTests
             "empty" => new List<TicketItem>(),
             _ => null
         };
-        var sut = new LegacyBookingProcessor();
+        var sut = new BookingProcessor();
 
         var actual = sut.Handle(1001, 7, "Іван", mail,
             ViewerKind.Regular, 0, items, state, "UAH",
@@ -45,7 +45,7 @@ public class LegacyCharacterizationTests
     [Fact]
     public void Handle_VipOrder_ReturnsExactReport()
     {
-        var sut = new LegacyBookingProcessor();
+        var sut = new BookingProcessor();
 
         var report = sut.Handle(1001, 7, "Іван", "a@b.c",
             ViewerKind.Vip, 3, TwoLines(), DocState.New, "UAH",
@@ -70,7 +70,7 @@ public class LegacyCharacterizationTests
     public void Preview_ByKind_ReturnsTotal(ViewerKind kind,
         int done, decimal expected)
     {
-        var sut = new LegacyBookingProcessor();
+        var sut = new BookingProcessor();
 
         var total = sut.Preview(kind, done, TwoLines());
 
@@ -80,7 +80,7 @@ public class LegacyCharacterizationTests
     [Fact]
     public void Preview_AfterDiscountExactly1000_FreeShipping()
     {
-        var sut = new LegacyBookingProcessor();
+        var sut = new BookingProcessor();
         var items = new List<TicketItem>
         {
             new TicketItem { Seat = "C-3", Qty = 1, Price = 1000m }
@@ -94,7 +94,7 @@ public class LegacyCharacterizationTests
     [Fact]
     public void Preview_VipBigOrder_DiscountCappedAt500()
     {
-        var sut = new LegacyBookingProcessor();
+        var sut = new BookingProcessor();
         var items = new List<TicketItem>
         {
             new TicketItem { Seat = "D-4", Qty = 4, Price = 1000m }
@@ -122,7 +122,7 @@ public class LegacyCharacterizationTests
         var expected = "ІВАН [VIP] [ЛОЯЛЬНИЙ] " +
             "<ivan@mail.com> стаж " + years;
 
-        var actual = new LegacyBookingProcessor().DescribeClient(c);
+        var actual = new BookingProcessor().DescribeClient(c);
 
         Assert.Equal(expected, actual);
     }

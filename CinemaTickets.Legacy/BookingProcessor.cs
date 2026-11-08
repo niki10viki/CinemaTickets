@@ -11,7 +11,7 @@ public class TicketItem
     public string Zone = "";
 }
 
-public class LegacyBookingProcessor
+public class BookingProcessor
 {
     private decimal _tmpSum;
     private decimal _tmpDiscount;
