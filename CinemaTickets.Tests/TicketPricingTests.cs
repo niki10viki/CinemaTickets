@@ -13,6 +13,8 @@ public class TicketPricingTests
     [InlineData(200, 5, 18, false, 220)]
     [InlineData(200, 10, 18, false, 260)]
     [InlineData(200, 5, 12, true, 80)]
+    [InlineData(200, 10, 12, true, 96)]
+    [InlineData(100, 10, 18, true, 50)]
     public void PriceFor_Boundaries_MatchesTable(
         double basePrice, int row, int startHour, bool isChild, double expected)
     {

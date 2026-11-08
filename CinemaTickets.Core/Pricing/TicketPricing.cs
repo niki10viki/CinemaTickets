@@ -42,6 +42,18 @@ public sealed class TicketPricing
         Justification = "Правило ціни передається як об'єкт, щоб його можна було підмінити.")]
     public decimal PriceFor(decimal basePrice, int row, int startHour, bool isChild)
     {
+        EnsureInputIsValid(basePrice, row, startHour);
+        decimal price = basePrice * RateFor(row, startHour);
+        if (isChild)
+        {
+            price = Math.Min(price * (1m - ChildRate), basePrice * ChildMaxShare);
+        }
+
+        return decimal.Round(price, 2);
+    }
+
+    private static void EnsureInputIsValid(decimal basePrice, int row, int startHour)
+    {
         if (basePrice < 0m)
         {
             throw new ArgumentOutOfRangeException(
@@ -51,7 +63,11 @@ public sealed class TicketPricing
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(row);
         ArgumentOutOfRangeException.ThrowIfNegative(startHour);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(startHour, 23);
+    }
 
+    // націнки за ряд і за вечірній сеанс додаються одна до одної
+    private static decimal RateFor(int row, int startHour)
+    {
         decimal rate = 1m;
         if (row >= ComfortRowFrom)
         {
@@ -63,17 +79,6 @@ public sealed class TicketPricing
             rate += EveningRate;
         }
 
-        decimal price = basePrice * rate;
-        if (isChild)
-        {
-            price *= 1m - ChildRate;
-            decimal childMax = basePrice * ChildMaxShare;
-            if (price > childMax)
-            {
-                price = childMax;
-            }
-        }
-
-        return decimal.Round(price, 2);
+        return rate;
     }
 }
