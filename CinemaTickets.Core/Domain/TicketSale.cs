@@ -46,7 +46,7 @@ public class TicketSale
     /// <summary>Стан «скасований».</summary>
     private const int StatusCancelled = 3;
 
-    private readonly List<string[]> _lines = new List<string[]>();
+    private readonly List<SaleLine> _lines = new();
 
     /// <summary>
     /// Створює новий продаж квитків для покупця.
@@ -99,11 +99,7 @@ public class TicketSale
     /// <param name="unitPrice">Ціна одного квитка, грн.</param>
     public void AddLine(string seatCategory, int quantity, decimal unitPrice)
     {
-        string[] line = new string[3];
-        line[0] = seatCategory;
-        line[1] = quantity.ToString(CultureInfo.CurrentCulture);
-        line[2] = unitPrice.ToString(CultureInfo.CurrentCulture);
-        _lines.Add(line);
+        _lines.Add(new SaleLine(seatCategory, quantity, unitPrice));
     }
 
     /// <summary>
@@ -115,11 +111,9 @@ public class TicketSale
     {
         decimal total = 0;
         int lineCount = 0;
-        for (int i = 0; i < _lines.Count; i++)
+        foreach (SaleLine line in _lines)
         {
-            int quantity = int.Parse(_lines[i][1], CultureInfo.CurrentCulture);
-            decimal unitPrice = decimal.Parse(_lines[i][2], CultureInfo.CurrentCulture);
-            total += quantity * unitPrice;
+            total += line.Quantity * line.UnitPrice;
             lineCount++;
         }
 
@@ -204,18 +198,19 @@ public class TicketSale
     public string BuildReport()
     {
         string report = string.Empty;
-        for (int i = 0; i < _lines.Count; i++)
+        foreach (SaleLine line in _lines)
         {
-            int quantity = int.Parse(_lines[i][1], CultureInfo.CurrentCulture);
-            decimal unitPrice = decimal.Parse(_lines[i][2], CultureInfo.CurrentCulture);
-            report = report + "Категорія: " + _lines[i][0]
-                + "; кількість: " + _lines[i][1]
-                + "; ціна: " + _lines[i][2]
-                + "; сума: " + (quantity * unitPrice)
+            report = report + "Категорія: " + line.SeatCategory
+                + "; кількість: " + line.Quantity.ToString(CultureInfo.CurrentCulture)
+                + "; ціна: " + line.UnitPrice.ToString(CultureInfo.CurrentCulture)
+                + "; сума: " + (line.Quantity * line.UnitPrice)
                 + "\n";
         }
 
         report = report + "Разом: " + CalculateTotal(false) + "\n";
         return report;
     }
+
+    // рядок продажу зберігається типізовано: розбирати рядки всередині ядра більше не треба
+    private sealed record SaleLine(string SeatCategory, int Quantity, decimal UnitPrice);
 }
