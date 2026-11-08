@@ -23,41 +23,15 @@ public class LegacyBookingProcessor
         List<TicketItem>? items, DocState state,
         string currency, DateTime createdAt, bool sendMail)
     {
-        if (items != null)
-        {
-            if (items.Count > 0)
-            {
-                if (state == DocState.New || state == DocState.Paid)
-                {
-                    if (viewerMail != null &&
-                        viewerMail.Contains("@"))
-                    {
-                        _log.Add("ok " + orderId);
-                    }
-                    else
-                    {
-                        return "ERR: mail";
-                    }
-                }
-                else
-                {
-                    return "ERR: state";
-                }
-            }
-            else
-            {
-                return "ERR: empty";
-            }
-        }
-        else
-        {
-            return "ERR: null";
-        }
+        var error = Validate(items, state, viewerMail);
+        if (error != null) return error;
+        _log.Add("ok " + orderId);
+        var lines = items!;
 
         _tmpSum = 0m;
-        for (int i = 0; i < items.Count; i++)
+        for (int i = 0; i < lines.Count; i++)
         {
-            _tmpSum += items[i].Qty * items[i].Price;
+            _tmpSum += lines[i].Qty * lines[i].Price;
         }
 
         _tmpDiscount = 0m;
@@ -83,10 +57,10 @@ public class LegacyBookingProcessor
 
         string txt = "Документ #" + orderId + "\n";
         txt += "Клієнт: " + viewerName + "\n";
-        for (int i = 0; i < items.Count; i++)
+        for (int i = 0; i < lines.Count; i++)
         {
-            txt += items[i].Seat + " x" + items[i].Qty + " = " +
-                (items[i].Qty * items[i].Price)
+            txt += lines[i].Seat + " x" + lines[i].Qty + " = " +
+                (lines[i].Qty * lines[i].Price)
                     .ToString("0.00") + " " + currency + "\n";
         }
         txt += "Знижка: " + _tmpDiscount.ToString("0.00") +
@@ -101,6 +75,18 @@ public class LegacyBookingProcessor
             _log.Add("mail -> " + viewerMail);
         }
         return txt;
+    }
+
+    private static string? Validate(
+        List<TicketItem>? items, DocState state, string? viewerMail)
+    {
+        if (items is null) return "ERR: null";
+        if (items.Count == 0) return "ERR: empty";
+        if (state is not (DocState.New or DocState.Paid))
+            return "ERR: state";
+        if (viewerMail is null || !viewerMail.Contains("@"))
+            return "ERR: mail";
+        return null;
     }
 
     public decimal Preview(ViewerKind viewerKind, int viewerDone,
