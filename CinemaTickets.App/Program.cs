@@ -1,5 +1,6 @@
 using System.Text;
 using CinemaTickets.App;
+using CinemaTickets.Core;
 using CinemaTickets.Core.Abstractions;
 using CinemaTickets.Core.Domain;
 using CinemaTickets.Core.Errors;
@@ -11,6 +12,7 @@ using CinemaTickets.Core.Storage;
 using Microsoft.Extensions.Logging;
 
 Console.OutputEncoding = Encoding.UTF8;
+Console.WriteLine($"CinemaTickets v{VersionInfo.Current()}");
 bool dialog = args.Length > 0 && args[0] == "order";
 
 // журнал іде в потік помилок, щоб не змішуватися з діалогом у стандартному виводі
