@@ -109,30 +109,10 @@ public class LegacyBookingProcessor
     public decimal Preview(ViewerKind viewerKind, int viewerDone,
         List<TicketItem> items)
     {
-        decimal s = 0m;
-        foreach (var it in items)
-        {
-            s += it.Qty * it.Price;
-        }
-        decimal d = 0m;
-        if (viewerKind == ViewerKind.Vip)
-        {
-            d = s * PricingRules.VipRate;
-            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
-        }
-        else if (viewerKind == ViewerKind.Staff)
-        {
-            d = s * PricingRules.StaffRate;
-            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
-        }
-        else if (viewerDone > PricingRules.LoyalOrders)
-        {
-            d = s * PricingRules.LoyalRate;
-            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
-        }
-        decimal sh = 0m;
-        if (s - d < PricingRules.FreeShipFrom) sh = PricingRules.ShipCost;
-        return s - d + sh;
+        var subtotal = Subtotal(items);
+        var discount = DiscountOf(subtotal, viewerKind, viewerDone);
+        var payable = subtotal - discount;
+        return payable + ShippingOf(payable);
     }
 
     public string DescribeClient(Viewer c)
