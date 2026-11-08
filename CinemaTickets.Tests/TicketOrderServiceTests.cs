@@ -45,6 +45,19 @@ public class TicketOrderServiceTests
         Assert.Equal("order.exists", ex.Rule);
     }
 
+    [Fact]
+    public void Pay_OrderWithoutTickets_ThrowsOrderEmpty()
+    {
+        var repository = new FakeTicketOrderRepository();
+        repository.Add(new TicketOrder(2, 100, DateTimeOffset.Now));
+        var service = NewService(repository, new StubPricingPolicy(1m));
+
+        var ex = Assert.Throws<DomainRuleException>(() => service.Pay(2, 50m));
+
+        Assert.Equal("order.empty", ex.Rule);
+        Assert.IsType<InvalidOperationException>(ex.InnerException);
+    }
+
     private static TicketOrderService NewService(
         FakeTicketOrderRepository repository,
         StubPricingPolicy pricing,
