@@ -11,7 +11,7 @@ namespace CinemaTickets.Core.Services;
 /// <summary>
 /// Прикладний сервіс замовлень: сценарій оформлення та розрахунок суми за політикою.
 /// </summary>
-public sealed class TicketOrderService
+public sealed partial class TicketOrderService
 {
     private readonly ITicketOrderRepository _repository;
     private readonly IPricingPolicy _pricing;
@@ -38,6 +38,10 @@ public sealed class TicketOrderService
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
+    // область журналу: усі записи однієї операції мають номер замовлення
+    private static Func<ILogger, int, IDisposable?> OrderScope { get; } =
+        LoggerMessage.DefineScope<int>("Order:{OrderId}");
+
     /// <summary>
     /// Оформлює замовлення: зберігає його у сховищі й сповіщає глядача.
     /// </summary>
@@ -47,8 +51,7 @@ public sealed class TicketOrderService
     {
         ArgumentNullException.ThrowIfNull(order);
         _repository.Add(order);
-        _log.LogInformation(
-            "Замовлення {OrderId} оформлено, квитків {Count}", order.Id, order.Lines.Count);
+        LogOrderPlaced(order.Id, order.Lines.Count);
         _notifier.Notify(
             order.ViewerId,
             string.Create(
@@ -68,9 +71,8 @@ public sealed class TicketOrderService
     public void AddLine(int orderId, TicketLine line)
     {
         ArgumentNullException.ThrowIfNull(line);
-        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", orderId);
-        _log.LogDebug(
-            "Додавання місця {Row}/{Seat}, ціна {Price}", line.Row, line.Seat, line.Price);
+        using IDisposable? scope = OrderScope(_log, orderId);
+        LogAddingSeat(line.Row, line.Seat, line.Price);
         TicketOrder order = Find(orderId);
         if (order.Status != TicketStatus.New)
         {
@@ -83,15 +85,14 @@ public sealed class TicketOrderService
             l => l.ScreeningId == line.ScreeningId && l.Row == line.Row && l.Seat == line.Seat);
         if (seatTaken)
         {
-            _log.LogWarning(
-                "Місце {Row}/{Seat} уже є в замовленні, відхилено", line.Row, line.Seat);
+            LogSeatRejected(line.Row, line.Seat);
             throw new DomainRuleException(
                 "seat.taken",
                 Text($"Місце {line.Row}/{line.Seat} уже є в замовленні {orderId}"));
         }
 
         order.AddLine(line);
-        _log.LogInformation("Додано місце {Row}/{Seat}", line.Row, line.Seat);
+        LogSeatAdded(line.Row, line.Seat);
     }
 
     /// <summary>
@@ -104,8 +105,8 @@ public sealed class TicketOrderService
     /// </exception>
     public void Pay(int orderId, decimal amount)
     {
-        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", orderId);
-        _log.LogDebug("Початок оплати, внесено {Amount}", amount);
+        using IDisposable? scope = OrderScope(_log, orderId);
+        LogPaymentStarted(amount);
         TicketOrder order = Find(orderId);
         if (order.Status != TicketStatus.New)
         {
@@ -117,7 +118,7 @@ public sealed class TicketOrderService
         decimal total = TotalOf(order);
         if (amount < total)
         {
-            _log.LogWarning("Оплату відхилено: внесено {Amount}, треба {Total}", amount, total);
+            LogPaymentRejected(amount, total);
             throw new DomainRuleException(
                 "order.amount",
                 Text($"Сплачено {amount:0.00}, треба {total:0.00}"));
@@ -125,7 +126,7 @@ public sealed class TicketOrderService
 
         if (amount > total)
         {
-            _log.LogWarning("Переплата {Extra}, касир видає решту", amount - total);
+            LogOverpayment(amount - total);
         }
 
         try
@@ -135,14 +136,14 @@ public sealed class TicketOrderService
         catch (InvalidOperationException ex)
         {
             // діалог не пускає до оплати порожнє замовлення, тож це дефект коду, що викликає сервіс
-            _log.LogError(ex, "До оплати дійшло замовлення без квитків");
+            LogEmptyOrderPaid(ex);
             throw new DomainRuleException(
                 "order.empty",
                 Text($"Замовлення {orderId} не містить квитків"),
                 ex);
         }
 
-        _log.LogInformation("Оплачено {Total}, стан {Status}", total, order.Status);
+        LogPaid(total, order.Status);
     }
 
     /// <summary>
@@ -163,17 +164,17 @@ public sealed class TicketOrderService
     /// </exception>
     public void Cancel(int orderId, string reason)
     {
-        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", orderId);
+        using IDisposable? scope = OrderScope(_log, orderId);
         TicketOrder order = Find(orderId);
         try
         {
             order.Cancel();
-            _log.LogInformation("Замовлення скасовано, причина: {Reason}", reason);
+            LogCancelled(reason);
         }
         catch (InvalidOperationException ex)
         {
             // перехоплюємо лише очікуваний виняток і загортаємо його, зберігаючи першопричину
-            _log.LogWarning(ex, "Скасування відхилено, стан {Status}", order.Status);
+            LogCancelRejected(ex, order.Status);
             throw new DomainRuleException(
                 "order.cancellable",
                 Text($"Замовлення {orderId} у стані {order.Status} не можна скасувати"),
@@ -211,7 +212,7 @@ public sealed class TicketOrderService
     public void ExportReport(string path, TicketOrder order)
     {
         ArgumentNullException.ThrowIfNull(order);
-        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", order.Id);
+        using IDisposable? scope = OrderScope(_log, order.Id);
         try
         {
             // using закриває файл навіть тоді, коли TotalOf або запис кинуть виняток
@@ -223,11 +224,11 @@ public sealed class TicketOrderService
         catch (IOException ex)
         {
             // збій середовища: записуємо в журнал і передаємо вгору зі збереженим стеком
-            _log.LogError(ex, "Звіт не записано у {Path}", path);
+            LogReportFailed(ex, path);
             throw;
         }
 
-        _log.LogInformation("Звіт збережено у {Path}", path);
+        LogReportSaved(path);
     }
 
     /// <summary>
@@ -249,4 +250,45 @@ public sealed class TicketOrderService
     private TicketOrder Find(int orderId) =>
         _repository.GetById(orderId)
         ?? throw new DomainRuleException("order.exists", Text($"Замовлення {orderId} не знайдено"));
+
+    // записи журналу оголошено делегатами LoggerMessage: шаблон розбирається один раз,
+    // а аргументи не пакуються, якщо рівень вимкнено
+    [LoggerMessage(1, LogLevel.Information, "Замовлення {OrderId} оформлено, квитків {Count}")]
+    private partial void LogOrderPlaced(int orderId, int count);
+
+    [LoggerMessage(2, LogLevel.Debug, "Додавання місця {Row}/{Seat}, ціна {Price}")]
+    private partial void LogAddingSeat(int row, int seat, decimal price);
+
+    [LoggerMessage(3, LogLevel.Warning, "Місце {Row}/{Seat} уже є в замовленні, відхилено")]
+    private partial void LogSeatRejected(int row, int seat);
+
+    [LoggerMessage(4, LogLevel.Information, "Додано місце {Row}/{Seat}")]
+    private partial void LogSeatAdded(int row, int seat);
+
+    [LoggerMessage(5, LogLevel.Debug, "Початок оплати, внесено {Amount}")]
+    private partial void LogPaymentStarted(decimal amount);
+
+    [LoggerMessage(6, LogLevel.Warning, "Оплату відхилено: внесено {Amount}, треба {Total}")]
+    private partial void LogPaymentRejected(decimal amount, decimal total);
+
+    [LoggerMessage(7, LogLevel.Warning, "Переплата {Extra}, касир видає решту")]
+    private partial void LogOverpayment(decimal extra);
+
+    [LoggerMessage(8, LogLevel.Error, "До оплати дійшло замовлення без квитків")]
+    private partial void LogEmptyOrderPaid(Exception exception);
+
+    [LoggerMessage(9, LogLevel.Information, "Оплачено {Total}, стан {Status}")]
+    private partial void LogPaid(decimal total, TicketStatus status);
+
+    [LoggerMessage(10, LogLevel.Information, "Замовлення скасовано, причина: {Reason}")]
+    private partial void LogCancelled(string reason);
+
+    [LoggerMessage(11, LogLevel.Warning, "Скасування відхилено, стан {Status}")]
+    private partial void LogCancelRejected(Exception exception, TicketStatus status);
+
+    [LoggerMessage(12, LogLevel.Error, "Звіт не записано у {Path}")]
+    private partial void LogReportFailed(Exception exception, string path);
+
+    [LoggerMessage(13, LogLevel.Information, "Звіт збережено у {Path}")]
+    private partial void LogReportSaved(string path);
 }

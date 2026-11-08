@@ -47,13 +47,13 @@ try
 }
 catch (DomainRuleException ex)
 {
-    log.LogWarning("Правило {Rule}: {Message}", ex.Rule, ex.Message);
+    AppLog.RuleViolated(log, ex.Rule, ex.Message);
     Console.Error.WriteLine(ex.Message);
     return 1;
 }
 catch (Exception ex)
 {
-    log.LogCritical(ex, "Непередбачений збій");
+    AppLog.UnexpectedFailure(log, ex);
     Console.Error.WriteLine("Внутрішня помилка, застосунок зупинено");
     return 2;
 }
@@ -94,11 +94,11 @@ static FileAuditLog? OpenAudit(string path, ILogger log)
     }
     catch (IOException ex)
     {
-        log.LogWarning(ex, "Журнал аудиту {Path} зайнятий", path);
+        AppLog.AuditBusy(log, ex, path);
     }
     catch (UnauthorizedAccessException ex)
     {
-        log.LogWarning(ex, "Немає прав на запис журналу аудиту {Path}", path);
+        AppLog.AuditDenied(log, ex, path);
     }
 
     Console.WriteLine("Журнал аудиту недоступний, роботу продовжено без нього");
