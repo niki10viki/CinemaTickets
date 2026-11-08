@@ -13,8 +13,6 @@ public class TicketItem
 
 public class BookingProcessor
 {
-    private decimal _tmpSum;
-    private decimal _tmpDiscount;
     private readonly DiscountPolicy _discounts = new();
     private readonly ShippingPolicy _shipping = new();
     private readonly ReportBuilder _report = new();
@@ -27,12 +25,12 @@ public class BookingProcessor
         _log.Add("ok " + req.OrderId);
         var lines = req.Items!;
 
-        _tmpSum = Subtotal(lines);
-        _tmpDiscount = _discounts.For(_tmpSum, req.Viewer);
-        decimal ship = _shipping.For(_tmpSum - _tmpDiscount);
-        decimal total = _tmpSum - _tmpDiscount + ship;
+        var subtotal = Subtotal(lines);
+        var discount = _discounts.For(subtotal, req.Viewer);
+        decimal ship = _shipping.For(subtotal - discount);
+        decimal total = subtotal - discount + ship;
 
-        string txt = _report.Build(req, _tmpDiscount, ship, total);
+        string txt = _report.Build(req, discount, ship, total);
 
         if (req.SendMail)
         {
