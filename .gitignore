@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 # власні винятки проєкту
 *.user
 data/*.local.json
+# ЛР7: результати запусків тестів і HTML-звіт покриття не комітимо
+TestResults/
+coverage/
