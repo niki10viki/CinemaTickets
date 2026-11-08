@@ -2,6 +2,7 @@ using System.Text;
 using CinemaTickets.App;
 using CinemaTickets.Core.Abstractions;
 using CinemaTickets.Core.Domain;
+using CinemaTickets.Core.Errors;
 using CinemaTickets.Core.Orders;
 using CinemaTickets.Core.Pricing;
 using CinemaTickets.Core.Reporting;
@@ -10,13 +11,30 @@ using CinemaTickets.Core.Storage;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-if (args.Length > 0 && args[0] == "order")
+// єдине місце, де перехоплюється будь-який виняток: користувач бачить повідомлення,
+// а оболонка — код завершення (1 — порушено правило, 2 — непередбачена помилка)
+try
 {
-    RunOrderDialog();
+    if (args.Length > 0 && args[0] == "order")
+    {
+        RunOrderDialog();
+    }
+    else
+    {
+        RunDemos();
+    }
+
+    return 0;
 }
-else
+catch (DomainRuleException ex)
 {
-    RunDemos();
+    Console.Error.WriteLine($"Порушено правило {ex.Rule}: {ex.Message}");
+    return 1;
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"Непередбачена помилка: {ex.Message}");
+    return 2;
 }
 
 // ЛР5: діалог оформлення замовлення; помилки введення не зупиняють застосунок

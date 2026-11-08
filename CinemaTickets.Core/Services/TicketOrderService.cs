@@ -113,40 +113,32 @@ public sealed class TicketOrderService
     /// Завантажує замовлення за номером.
     /// </summary>
     /// <param name="orderId">Номер замовлення.</param>
-    /// <returns>Замовлення або null.</returns>
-    public TicketOrder? Load(int orderId)
-    {
-        // АНТИПАТЕРН 1: порожній catch — дефект зникає без сліду
-        try
-        {
-            return _repository.GetById(orderId);
-        }
-        catch (Exception)
-        {
-        }
-
-        return null;
-    }
+    /// <returns>Знайдене замовлення.</returns>
+    /// <exception cref="DomainRuleException">Замовлення не знайдено.</exception>
+    public TicketOrder Load(int orderId) => Find(orderId);
 
     /// <summary>
-    /// Скасовує замовлення.
+    /// Скасовує нове замовлення.
     /// </summary>
     /// <param name="orderId">Номер замовлення.</param>
     /// <param name="reason">Причина скасування.</param>
+    /// <exception cref="DomainRuleException">
+    /// Замовлення немає або його стан не дозволяє скасування.
+    /// </exception>
     public void Cancel(int orderId, string reason)
     {
-        // АНТИПАТЕРНИ 2 і 3: широке перехоплення й throw ex
+        TicketOrder order = Find(orderId);
         try
         {
-            TicketOrder order = _repository.GetById(orderId)!;
             order.Cancel();
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            Console.WriteLine("Щось пішло не так");
-#pragma warning disable CA2200 // стан «до»: аналізатор забороняє throw ex, і саме це виправляємо
-            throw ex;
-#pragma warning restore CA2200
+            // перехоплюємо лише очікуваний виняток і загортаємо його, зберігаючи першопричину
+            throw new DomainRuleException(
+                "order.cancellable",
+                Text($"Замовлення {orderId} у стані {order.Status} не можна скасувати"),
+                ex);
         }
     }
 

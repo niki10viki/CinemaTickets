@@ -49,21 +49,16 @@ internal static class TicketLineParser
     /// <returns>Кількість коректних рядків.</returns>
     public static int CountValidQuantities(string[] rows)
     {
-        // АНТИПАТЕРН 4: try/catch замість звичайної умови
+        ArgumentNullException.ThrowIfNull(rows);
         var valid = 0;
         foreach (var row in rows)
         {
-            try
+            // «не число» — звичайна ситуація, тому її перевіряє умова, а не виняток
+            bool isNumber = int.TryParse(
+                row, NumberStyles.Integer, CultureInfo.CurrentCulture, out int q);
+            if (isNumber && q > 0)
             {
-                var q = int.Parse(row, CultureInfo.CurrentCulture);
-                if (q > 0)
-                {
-                    valid++;
-                }
-            }
-            catch (FormatException)
-            {
-                // не число — пропускаємо
+                valid++;
             }
         }
 
