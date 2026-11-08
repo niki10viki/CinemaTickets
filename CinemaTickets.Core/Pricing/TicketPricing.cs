@@ -22,6 +22,9 @@ public sealed class TicketPricing
     /// <summary>Знижка на дитячий квиток.</summary>
     public const decimal ChildRate = 0.60m;
 
+    /// <summary>Частка базової ціни, дорожче за яку дитячий квиток не продається.</summary>
+    public const decimal ChildMaxShare = 0.50m;
+
     /// <summary>
     /// Рахує ціну квитка.
     /// </summary>
@@ -64,6 +67,11 @@ public sealed class TicketPricing
         if (isChild)
         {
             price *= 1m - ChildRate;
+            decimal childMax = basePrice * ChildMaxShare;
+            if (price > childMax)
+            {
+                price = childMax;
+            }
         }
 
         return decimal.Round(price, 2);
