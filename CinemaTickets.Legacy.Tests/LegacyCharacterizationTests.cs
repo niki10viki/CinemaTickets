@@ -137,7 +137,7 @@ public class LegacyCharacterizationTests
         var expected = "ІВАН [VIP] [ЛОЯЛЬНИЙ] " +
             "<ivan@mail.com> стаж " + years;
 
-        var actual = new BookingProcessor().DescribeClient(c);
+        var actual = c.Describe();
 
         Assert.Equal(expected, actual);
     }

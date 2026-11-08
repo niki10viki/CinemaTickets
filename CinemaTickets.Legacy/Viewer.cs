@@ -26,4 +26,14 @@ public sealed class Viewer
 
     public bool IsLoyal =>
         DoneCount > PricingRules.LoyalOrders;
+
+    public string Describe()
+    {
+        var s = Name.Trim().ToUpper();
+        if (Kind == ViewerKind.Vip) s += " [VIP]";
+        if (IsLoyal) s += " [ЛОЯЛЬНИЙ]";
+        s += " <" + Email.ToLower() + ">";
+        return s + " стаж " +
+            (DateTime.Now.Year - SinceUtc.Year);
+    }
 }
