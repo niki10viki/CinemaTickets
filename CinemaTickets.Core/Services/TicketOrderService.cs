@@ -81,6 +81,34 @@ public sealed class TicketOrderService
     }
 
     /// <summary>
+    /// Оплачує замовлення.
+    /// </summary>
+    /// <param name="orderId">Номер замовлення.</param>
+    /// <param name="amount">Внесена сума, грн.</param>
+    /// <returns>0 — успіх; -1 — немає замовлення; -2 — не новий стан; -3 — замало грошей.</returns>
+    public int Pay(int orderId, decimal amount)
+    {
+        TicketOrder? order = _repository.GetById(orderId);
+        if (order == null)
+        {
+            return -1;
+        }
+
+        if (order.Status != TicketStatus.New)
+        {
+            return -2;
+        }
+
+        if (amount < TotalOf(order))
+        {
+            return -3;
+        }
+
+        order.Pay();
+        return 0;
+    }
+
+    /// <summary>
     /// Рахує суму замовлення як суму цін квитків за поточною політикою.
     /// </summary>
     /// <param name="order">Замовлення квитків.</param>
