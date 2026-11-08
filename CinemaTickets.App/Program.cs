@@ -34,7 +34,7 @@ try
 {
     if (dialog)
     {
-        RunOrderDialog(loggerFactory);
+        RunOrderDialog(loggerFactory, reportPath: args.Length > 1 ? args[1] : null);
     }
     else
     {
@@ -57,7 +57,7 @@ catch (Exception ex)
 }
 
 // ЛР5: діалог оформлення замовлення; помилки введення не зупиняють застосунок
-static void RunOrderDialog(ILoggerFactory loggerFactory)
+static void RunOrderDialog(ILoggerFactory loggerFactory, string? reportPath)
 {
     Console.InputEncoding = Encoding.UTF8;
     var repository = new InMemoryTicketOrderRepository();
@@ -71,6 +71,12 @@ static void RunOrderDialog(ILoggerFactory loggerFactory)
     repository.Add(order);
     new OrderConsole(service, Console.In, Console.Out, Console.IsInputRedirected)
         .Run(order, screeningId: 1);
+
+    if (reportPath is not null && order.Status == TicketStatus.Paid)
+    {
+        service.ExportReport(reportPath, order);
+        Console.WriteLine($"Звіт збережено: {reportPath}");
+    }
 }
 
 // демонстрації лабораторних робіт № 2–4

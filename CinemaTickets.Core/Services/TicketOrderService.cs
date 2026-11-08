@@ -199,6 +199,24 @@ public sealed class TicketOrderService
     }
 
     /// <summary>
+    /// Зберігає звіт про замовлення в текстовий файл.
+    /// </summary>
+    /// <param name="path">Шлях до файлу звіту.</param>
+    /// <param name="order">Замовлення квитків.</param>
+    /// <exception cref="ArgumentNullException">Замовлення не передано.</exception>
+    public void ExportReport(string path, TicketOrder order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        // РЕСУРС: якщо TotalOf кине виняток, Close не виконається й файл лишиться зайнятим
+        var writer = new StreamWriter(path);
+        writer.WriteLine(Text($"Замовлення {order.Id}, стан {order.Status}"));
+        writer.WriteLine(Text($"Квитків: {order.Lines.Count}"));
+        writer.WriteLine(Text($"До сплати: {TotalOf(order):0.00} грн"));
+        writer.Close();
+    }
+
+    /// <summary>
     /// Готує підсумок замовлення для звітів.
     /// </summary>
     /// <param name="order">Замовлення квитків.</param>
