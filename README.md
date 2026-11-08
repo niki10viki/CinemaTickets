@@ -1,5 +1,7 @@
 # CinemaTickets
 
+![CI](https://github.com/niki10viki/CinemaTickets/actions/workflows/ci.yml/badge.svg)
+
 Навчальний проєкт з дисципліни «Конструювання програмного забезпечення».
 Варіант № 9 — продаж квитків у кінотеатрі.
 
