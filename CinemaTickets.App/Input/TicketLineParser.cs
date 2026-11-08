@@ -41,4 +41,32 @@ internal static class TicketLineParser
 
         return Result<TicketLine>.Ok(new TicketLine(screeningId, r, s, p));
     }
+
+    /// <summary>
+    /// Рахує рядки, у яких записано додатну кількість квитків.
+    /// </summary>
+    /// <param name="rows">Рядки з кількістю квитків.</param>
+    /// <returns>Кількість коректних рядків.</returns>
+    public static int CountValidQuantities(string[] rows)
+    {
+        // АНТИПАТЕРН 4: try/catch замість звичайної умови
+        var valid = 0;
+        foreach (var row in rows)
+        {
+            try
+            {
+                var q = int.Parse(row, CultureInfo.CurrentCulture);
+                if (q > 0)
+                {
+                    valid++;
+                }
+            }
+            catch (FormatException)
+            {
+                // не число — пропускаємо
+            }
+        }
+
+        return valid;
+    }
 }

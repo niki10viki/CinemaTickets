@@ -110,6 +110,47 @@ public sealed class TicketOrderService
     }
 
     /// <summary>
+    /// Завантажує замовлення за номером.
+    /// </summary>
+    /// <param name="orderId">Номер замовлення.</param>
+    /// <returns>Замовлення або null.</returns>
+    public TicketOrder? Load(int orderId)
+    {
+        // АНТИПАТЕРН 1: порожній catch — дефект зникає без сліду
+        try
+        {
+            return _repository.GetById(orderId);
+        }
+        catch (Exception)
+        {
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Скасовує замовлення.
+    /// </summary>
+    /// <param name="orderId">Номер замовлення.</param>
+    /// <param name="reason">Причина скасування.</param>
+    public void Cancel(int orderId, string reason)
+    {
+        // АНТИПАТЕРНИ 2 і 3: широке перехоплення й throw ex
+        try
+        {
+            TicketOrder order = _repository.GetById(orderId)!;
+            order.Cancel();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Щось пішло не так");
+#pragma warning disable CA2200 // стан «до»: аналізатор забороняє throw ex, і саме це виправляємо
+            throw ex;
+#pragma warning restore CA2200
+        }
+    }
+
+    /// <summary>
     /// Рахує суму замовлення як суму цін квитків за поточною політикою.
     /// </summary>
     /// <param name="order">Замовлення квитків.</param>
