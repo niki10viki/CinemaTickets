@@ -1,6 +1,7 @@
 using System.Globalization;
 using CinemaTickets.Core.Abstractions;
 using CinemaTickets.Core.Domain;
+using CinemaTickets.Core.Errors;
 using CinemaTickets.Core.Reporting;
 
 namespace CinemaTickets.Core.Services;
@@ -48,20 +49,35 @@ public sealed class TicketOrderService
     }
 
     /// <summary>
-    /// Додає квиток до замовлення за рядками, введеними в консолі.
+    /// Додає перевірений квиток до нового замовлення.
     /// </summary>
     /// <param name="orderId">Номер замовлення.</param>
-    /// <param name="screeningId">Ідентифікатор сеансу.</param>
-    /// <param name="row">Ряд у вигляді рядка з консолі.</param>
-    /// <param name="seat">Місце у вигляді рядка з консолі.</param>
-    /// <param name="price">Ціна у вигляді рядка з консолі.</param>
-    public void AddLine(int orderId, int screeningId, string row, string seat, string price)
+    /// <param name="line">Квиток, уже розібраний і перевірений за барикадою.</param>
+    /// <exception cref="ArgumentNullException">Квиток не передано.</exception>
+    /// <exception cref="DomainRuleException">
+    /// Замовлення немає, воно вже не нове або місце в ньому вже є.
+    /// </exception>
+    public void AddLine(int orderId, TicketLine line)
     {
-        TicketOrder order = _repository.GetById(orderId)!;
-        int r = int.Parse(row, CultureInfo.CurrentCulture);
-        int s = int.Parse(seat, CultureInfo.CurrentCulture);
-        decimal p = decimal.Parse(price, CultureInfo.CurrentCulture);
-        order.AddLine(new TicketLine(screeningId, r, s, p));
+        ArgumentNullException.ThrowIfNull(line);
+        TicketOrder order = Find(orderId);
+        if (order.Status != TicketStatus.New)
+        {
+            throw new DomainRuleException(
+                "order.editable",
+                Text($"Замовлення {orderId} у стані {order.Status}: квитки лише до нового"));
+        }
+
+        bool seatTaken = order.Lines.Any(
+            l => l.ScreeningId == line.ScreeningId && l.Row == line.Row && l.Seat == line.Seat);
+        if (seatTaken)
+        {
+            throw new DomainRuleException(
+                "seat.taken",
+                Text($"Місце {line.Row}/{line.Seat} уже є в замовленні {orderId}"));
+        }
+
+        order.AddLine(line);
     }
 
     /// <summary>
@@ -93,4 +109,12 @@ public sealed class TicketOrderService
         ArgumentNullException.ThrowIfNull(order);
         return new OrderSummary(order.Id, order.Status, TotalOf(order));
     }
+
+    // повідомлення бачить користувач, тому числа форматуються за його культурою
+    private static string Text(FormattableString message) =>
+        message.ToString(CultureInfo.CurrentCulture);
+
+    private TicketOrder Find(int orderId) =>
+        _repository.GetById(orderId)
+        ?? throw new DomainRuleException("order.exists", Text($"Замовлення {orderId} не знайдено"));
 }
