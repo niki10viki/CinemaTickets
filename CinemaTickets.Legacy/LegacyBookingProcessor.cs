@@ -28,31 +28,9 @@ public class LegacyBookingProcessor
         _log.Add("ok " + orderId);
         var lines = items!;
 
-        _tmpSum = 0m;
-        for (int i = 0; i < lines.Count; i++)
-        {
-            _tmpSum += lines[i].Qty * lines[i].Price;
-        }
-
-        _tmpDiscount = 0m;
-        if (viewerKind == ViewerKind.Vip)
-        {
-            _tmpDiscount = _tmpSum * PricingRules.VipRate;
-            if (_tmpDiscount > PricingRules.MaxDiscount) _tmpDiscount = PricingRules.MaxDiscount;
-        }
-        else if (viewerKind == ViewerKind.Staff)
-        {
-            _tmpDiscount = _tmpSum * PricingRules.StaffRate;
-            if (_tmpDiscount > PricingRules.MaxDiscount) _tmpDiscount = PricingRules.MaxDiscount;
-        }
-        else if (viewerDone > PricingRules.LoyalOrders)
-        {
-            _tmpDiscount = _tmpSum * PricingRules.LoyalRate;
-            if (_tmpDiscount > PricingRules.MaxDiscount) _tmpDiscount = PricingRules.MaxDiscount;
-        }
-
-        decimal ship = 0m;
-        if (_tmpSum - _tmpDiscount < PricingRules.FreeShipFrom) ship = PricingRules.ShipCost;
+        _tmpSum = Subtotal(lines);
+        _tmpDiscount = DiscountOf(_tmpSum, viewerKind, viewerDone);
+        decimal ship = ShippingOf(_tmpSum - _tmpDiscount);
         decimal total = _tmpSum - _tmpDiscount + ship;
 
         string txt = "Документ #" + orderId + "\n";
@@ -75,6 +53,45 @@ public class LegacyBookingProcessor
             _log.Add("mail -> " + viewerMail);
         }
         return txt;
+    }
+
+    private static decimal Subtotal(List<TicketItem> items)
+    {
+        decimal sum = 0m;
+        foreach (var it in items)
+        {
+            sum += it.Qty * it.Price;
+        }
+        return sum;
+    }
+
+    private static decimal DiscountOf(
+        decimal subtotal, ViewerKind viewerKind, int viewerDone)
+    {
+        decimal d = 0m;
+        if (viewerKind == ViewerKind.Vip)
+        {
+            d = subtotal * PricingRules.VipRate;
+            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
+        }
+        else if (viewerKind == ViewerKind.Staff)
+        {
+            d = subtotal * PricingRules.StaffRate;
+            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
+        }
+        else if (viewerDone > PricingRules.LoyalOrders)
+        {
+            d = subtotal * PricingRules.LoyalRate;
+            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
+        }
+        return d;
+    }
+
+    private static decimal ShippingOf(decimal payable)
+    {
+        decimal ship = 0m;
+        if (payable < PricingRules.FreeShipFrom) ship = PricingRules.ShipCost;
+        return ship;
     }
 
     private static string? Validate(
