@@ -69,13 +69,38 @@ static void RunOrderDialog(ILoggerFactory loggerFactory, string? reportPath)
 
     var order = new TicketOrder(7, 100, DateTimeOffset.Now);
     repository.Add(order);
+
+    // using закриває файл аудиту за будь-якого завершення діалогу, зокрема винятком
+    using FileAuditLog? audit = OpenAudit("audit.log", loggerFactory.CreateLogger("Audit"));
+    audit?.Write("order.opened", order.Id);
     new OrderConsole(service, Console.In, Console.Out, Console.IsInputRedirected)
         .Run(order, screeningId: 1);
+    audit?.Write(order.Status == TicketStatus.Paid ? "order.paid" : "order.unpaid", order.Id);
 
     if (reportPath is not null && order.Status == TicketStatus.Paid)
     {
         SaveReport(service, reportPath, order);
     }
+}
+
+// аудит не обов'язковий для продажу: недоступний файл — це попередження, а не аварія
+static FileAuditLog? OpenAudit(string path, ILogger log)
+{
+    try
+    {
+        return new FileAuditLog(path);
+    }
+    catch (IOException ex)
+    {
+        log.LogWarning(ex, "Журнал аудиту {Path} зайнятий", path);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        log.LogWarning(ex, "Немає прав на запис журналу аудиту {Path}", path);
+    }
+
+    Console.WriteLine("Журнал аудиту недоступний, роботу продовжено без нього");
+    return null;
 }
 
 // межа застосунку для збою середовища: замовлення вже оплачено, тож лише повідомляємо

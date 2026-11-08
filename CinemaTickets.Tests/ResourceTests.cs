@@ -35,6 +35,52 @@ public class ResourceTests
         }
     }
 
+    [Fact]
+    public void FileAuditLog_ExceptionInsideUsing_ClosesFile()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"audit-{Guid.NewGuid():N}.log");
+        try
+        {
+            Assert.Throws<InvalidOperationException>(() => WriteThenFail(path));
+
+            // Dispose дописав буфер і закрив файл: рядок на місці, файл вільний
+            string[] lines = File.ReadAllLines(path);
+            Assert.Single(lines);
+            Assert.EndsWith(";order.paid;7", lines[0], StringComparison.Ordinal);
+            using var exclusive = new FileStream(
+                path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void FileAuditLog_WriteAfterDispose_Throws()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"audit-{Guid.NewGuid():N}.log");
+        var audit = new FileAuditLog(path);
+        audit.Dispose();
+        audit.Dispose();
+
+        try
+        {
+            Assert.Throws<ObjectDisposedException>(() => audit.Write("order.paid", 7));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static void WriteThenFail(string path)
+    {
+        using var audit = new FileAuditLog(path);
+        audit.Write("order.paid", 7);
+        throw new InvalidOperationException("Збій посеред операції");
+    }
+
     private sealed class FailingPricingPolicy : IPricingPolicy
     {
         public decimal PriceOf(TicketLine line) =>
