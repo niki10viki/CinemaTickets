@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using CinemaTickets.Core.Abstractions;
 using CinemaTickets.Core.Domain;
@@ -195,6 +196,8 @@ public sealed class TicketOrderService
             total += _pricing.PriceOf(line);
         }
 
+        // від'ємна сума можлива лише через дефект політики ціноутворення
+        Debug.Assert(total >= 0, "Сума замовлення не може бути від'ємною");
         return total;
     }
 
