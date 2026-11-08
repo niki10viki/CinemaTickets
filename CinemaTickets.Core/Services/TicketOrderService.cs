@@ -48,6 +48,23 @@ public sealed class TicketOrderService
     }
 
     /// <summary>
+    /// Додає квиток до замовлення за рядками, введеними в консолі.
+    /// </summary>
+    /// <param name="orderId">Номер замовлення.</param>
+    /// <param name="screeningId">Ідентифікатор сеансу.</param>
+    /// <param name="row">Ряд у вигляді рядка з консолі.</param>
+    /// <param name="seat">Місце у вигляді рядка з консолі.</param>
+    /// <param name="price">Ціна у вигляді рядка з консолі.</param>
+    public void AddLine(int orderId, int screeningId, string row, string seat, string price)
+    {
+        TicketOrder order = _repository.GetById(orderId)!;
+        int r = int.Parse(row, CultureInfo.CurrentCulture);
+        int s = int.Parse(seat, CultureInfo.CurrentCulture);
+        decimal p = decimal.Parse(price, CultureInfo.CurrentCulture);
+        order.AddLine(new TicketLine(screeningId, r, s, p));
+    }
+
+    /// <summary>
     /// Рахує суму замовлення як суму цін квитків за поточною політикою.
     /// </summary>
     /// <param name="order">Замовлення квитків.</param>
