@@ -4,86 +4,50 @@ namespace CinemaTickets.Tests;
 
 public class TicketPricingTests
 {
-    [Fact]
-    public void PriceFor_NegativeBasePrice_Throws()
+    [Theory]
+    [InlineData(0, 5, 12, false, 0)]
+    [InlineData(200, 5, 12, false, 200)]
+    [InlineData(200, 9, 12, false, 200)]
+    [InlineData(200, 10, 12, false, 240)]
+    [InlineData(200, 5, 17, false, 200)]
+    [InlineData(200, 5, 18, false, 220)]
+    [InlineData(200, 10, 18, false, 260)]
+    [InlineData(200, 5, 12, true, 80)]
+    public void PriceFor_Boundaries_MatchesTable(
+        double basePrice, int row, int startHour, bool isChild, double expected)
     {
-        // Arrange
         var pricing = new TicketPricing();
 
-        // Act
-        void Act() => pricing.PriceFor(-0.01m, 5, 12, false);
+        decimal actual = pricing.PriceFor((decimal)basePrice, row, startHour, isChild);
 
-        // Assert
-        Assert.Throws<ArgumentOutOfRangeException>(Act);
+        Assert.Equal((decimal)expected, actual);
     }
 
-    [Fact]
-    public void PriceFor_ZeroBasePrice_ReturnsZero()
+    [Theory]
+    [InlineData(-0.01)]
+    [InlineData(-1000)]
+    public void PriceFor_NegativeBasePrice_ThrowsOutOfRange(double basePrice)
     {
         var pricing = new TicketPricing();
 
-        decimal actual = pricing.PriceFor(0m, 5, 12, false);
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(
+            () => pricing.PriceFor((decimal)basePrice, 5, 12, false));
 
-        Assert.Equal(0m, actual);
+        Assert.Equal("basePrice", ex.ParamName);
     }
 
-    [Fact]
-    public void PriceFor_OrdinaryRowDaytime_ReturnsBasePrice()
+    [Theory]
+    [InlineData(0, 12, "row")]
+    [InlineData(5, -1, "startHour")]
+    [InlineData(5, 24, "startHour")]
+    public void PriceFor_RowOrHourOutOfRange_ThrowsWithParamName(
+        int row, int startHour, string expectedParam)
     {
         var pricing = new TicketPricing();
 
-        decimal actual = pricing.PriceFor(200m, 5, 12, false);
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(
+            () => pricing.PriceFor(200m, row, startHour, false));
 
-        Assert.Equal(200m, actual);
-    }
-
-    [Fact]
-    public void PriceFor_LastOrdinaryRow_HasNoSurcharge()
-    {
-        var pricing = new TicketPricing();
-
-        decimal actual = pricing.PriceFor(200m, 9, 12, false);
-
-        Assert.Equal(200m, actual);
-    }
-
-    [Fact]
-    public void PriceFor_FirstComfortRow_AddsTwentyPercent()
-    {
-        var pricing = new TicketPricing();
-
-        decimal actual = pricing.PriceFor(200m, 10, 12, false);
-
-        Assert.Equal(240m, actual);
-    }
-
-    [Fact]
-    public void PriceFor_LastDaytimeHour_HasNoSurcharge()
-    {
-        var pricing = new TicketPricing();
-
-        decimal actual = pricing.PriceFor(200m, 5, 17, false);
-
-        Assert.Equal(200m, actual);
-    }
-
-    [Fact]
-    public void PriceFor_FirstEveningHour_AddsTenPercent()
-    {
-        var pricing = new TicketPricing();
-
-        decimal actual = pricing.PriceFor(200m, 5, 18, false);
-
-        Assert.Equal(220m, actual);
-    }
-
-    [Fact]
-    public void PriceFor_ChildDaytime_ReturnsFortyPercent()
-    {
-        var pricing = new TicketPricing();
-
-        decimal actual = pricing.PriceFor(200m, 5, 12, true);
-
-        Assert.Equal(80m, actual);
+        Assert.Equal(expectedParam, ex.ParamName);
     }
 }
