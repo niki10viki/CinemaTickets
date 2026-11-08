@@ -204,16 +204,27 @@ public sealed class TicketOrderService
     /// <param name="path">Шлях до файлу звіту.</param>
     /// <param name="order">Замовлення квитків.</param>
     /// <exception cref="ArgumentNullException">Замовлення не передано.</exception>
+    /// <exception cref="IOException">Файл не вдалося створити або записати.</exception>
     public void ExportReport(string path, TicketOrder order)
     {
         ArgumentNullException.ThrowIfNull(order);
+        using IDisposable? scope = _log.BeginScope("Order:{OrderId}", order.Id);
+        try
+        {
+            // using закриває файл навіть тоді, коли TotalOf або запис кинуть виняток
+            using var writer = new StreamWriter(path);
+            writer.WriteLine(Text($"Замовлення {order.Id}, стан {order.Status}"));
+            writer.WriteLine(Text($"Квитків: {order.Lines.Count}"));
+            writer.WriteLine(Text($"До сплати: {TotalOf(order):0.00} грн"));
+        }
+        catch (IOException ex)
+        {
+            // збій середовища: записуємо в журнал і передаємо вгору зі збереженим стеком
+            _log.LogError(ex, "Звіт не записано у {Path}", path);
+            throw;
+        }
 
-        // РЕСУРС: якщо TotalOf кине виняток, Close не виконається й файл лишиться зайнятим
-        var writer = new StreamWriter(path);
-        writer.WriteLine(Text($"Замовлення {order.Id}, стан {order.Status}"));
-        writer.WriteLine(Text($"Квитків: {order.Lines.Count}"));
-        writer.WriteLine(Text($"До сплати: {TotalOf(order):0.00} грн"));
-        writer.Close();
+        _log.LogInformation("Звіт збережено у {Path}", path);
     }
 
     /// <summary>

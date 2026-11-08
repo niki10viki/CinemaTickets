@@ -74,8 +74,21 @@ static void RunOrderDialog(ILoggerFactory loggerFactory, string? reportPath)
 
     if (reportPath is not null && order.Status == TicketStatus.Paid)
     {
-        service.ExportReport(reportPath, order);
-        Console.WriteLine($"Звіт збережено: {reportPath}");
+        SaveReport(service, reportPath, order);
+    }
+}
+
+// межа застосунку для збою середовища: замовлення вже оплачено, тож лише повідомляємо
+static void SaveReport(TicketOrderService service, string path, TicketOrder order)
+{
+    try
+    {
+        service.ExportReport(path, order);
+        Console.WriteLine($"Звіт збережено: {path}");
+    }
+    catch (IOException ex)
+    {
+        Console.WriteLine($"Не вдалося зберегти звіт: {ex.Message}");
     }
 }
 
