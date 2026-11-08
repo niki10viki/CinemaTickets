@@ -81,31 +81,32 @@ public sealed class TicketOrderService
     }
 
     /// <summary>
-    /// Оплачує замовлення.
+    /// Оплачує нове замовлення внесеною сумою.
     /// </summary>
     /// <param name="orderId">Номер замовлення.</param>
     /// <param name="amount">Внесена сума, грн.</param>
-    /// <returns>0 — успіх; -1 — немає замовлення; -2 — не новий стан; -3 — замало грошей.</returns>
-    public int Pay(int orderId, decimal amount)
+    /// <exception cref="DomainRuleException">
+    /// Замовлення немає, воно не нове або внесено менше, ніж треба.
+    /// </exception>
+    public void Pay(int orderId, decimal amount)
     {
-        TicketOrder? order = _repository.GetById(orderId);
-        if (order == null)
-        {
-            return -1;
-        }
-
+        TicketOrder order = Find(orderId);
         if (order.Status != TicketStatus.New)
         {
-            return -2;
+            throw new DomainRuleException(
+                "order.payable",
+                Text($"Стан {order.Status} замовлення {orderId} не дозволяє оплату"));
         }
 
-        if (amount < TotalOf(order))
+        decimal total = TotalOf(order);
+        if (amount < total)
         {
-            return -3;
+            throw new DomainRuleException(
+                "order.amount",
+                Text($"Сплачено {amount:0.00}, треба {total:0.00}"));
         }
 
         order.Pay();
-        return 0;
     }
 
     /// <summary>
