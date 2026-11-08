@@ -15,6 +15,9 @@ public class LegacyBookingProcessor
 {
     private decimal _tmpSum;
     private decimal _tmpDiscount;
+    private readonly DiscountPolicy _discounts = new();
+    private readonly ShippingPolicy _shipping = new();
+    private readonly ReportBuilder _report = new();
     private readonly List<string> _log = new();
 
     public string Handle(int orderId, int viewerId,
@@ -29,24 +32,12 @@ public class LegacyBookingProcessor
         var lines = items!;
 
         _tmpSum = Subtotal(lines);
-        _tmpDiscount = DiscountOf(_tmpSum, viewerKind, viewerDone);
-        decimal ship = ShippingOf(_tmpSum - _tmpDiscount);
+        _tmpDiscount = _discounts.For(_tmpSum, viewerKind, viewerDone);
+        decimal ship = _shipping.For(_tmpSum - _tmpDiscount);
         decimal total = _tmpSum - _tmpDiscount + ship;
 
-        string txt = "Документ #" + orderId + "\n";
-        txt += "Клієнт: " + viewerName + "\n";
-        for (int i = 0; i < lines.Count; i++)
-        {
-            txt += lines[i].Seat + " x" + lines[i].Qty + " = " +
-                (lines[i].Qty * lines[i].Price)
-                    .ToString("0.00") + " " + currency + "\n";
-        }
-        txt += "Знижка: " + _tmpDiscount.ToString("0.00") +
-            " " + currency + "\n";
-        txt += "Доставка: " + ship.ToString("0.00") +
-            " " + currency + "\n";
-        txt += "Разом: " + total.ToString("0.00") +
-            " " + currency + "\n";
+        string txt = _report.Build(orderId, viewerName, lines,
+            currency, _tmpDiscount, ship, total);
 
         if (sendMail)
         {
@@ -65,35 +56,6 @@ public class LegacyBookingProcessor
         return sum;
     }
 
-    private static decimal DiscountOf(
-        decimal subtotal, ViewerKind viewerKind, int viewerDone)
-    {
-        decimal d = 0m;
-        if (viewerKind == ViewerKind.Vip)
-        {
-            d = subtotal * PricingRules.VipRate;
-            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
-        }
-        else if (viewerKind == ViewerKind.Staff)
-        {
-            d = subtotal * PricingRules.StaffRate;
-            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
-        }
-        else if (viewerDone > PricingRules.LoyalOrders)
-        {
-            d = subtotal * PricingRules.LoyalRate;
-            if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
-        }
-        return d;
-    }
-
-    private static decimal ShippingOf(decimal payable)
-    {
-        decimal ship = 0m;
-        if (payable < PricingRules.FreeShipFrom) ship = PricingRules.ShipCost;
-        return ship;
-    }
-
     private static string? Validate(
         List<TicketItem>? items, DocState state, string? viewerMail)
     {
@@ -110,9 +72,9 @@ public class LegacyBookingProcessor
         List<TicketItem> items)
     {
         var subtotal = Subtotal(items);
-        var discount = DiscountOf(subtotal, viewerKind, viewerDone);
+        var discount = _discounts.For(subtotal, viewerKind, viewerDone);
         var payable = subtotal - discount;
-        return payable + ShippingOf(payable);
+        return payable + _shipping.For(payable);
     }
 
     public string DescribeClient(Viewer c)
