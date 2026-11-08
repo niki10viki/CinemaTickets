@@ -3,16 +3,6 @@ using System.Collections.Generic;
 
 namespace CinemaTickets.Legacy;
 
-public class Viewer
-{
-    public int Id;
-    public string Name = "";
-    public string Email = "";
-    public string Kind = "regular";
-    public int DoneCount;
-    public DateTime SinceUtc;
-}
-
 public class TicketItem
 {
     public string Seat = "";
@@ -29,15 +19,15 @@ public class LegacyBookingProcessor
 
     public string Handle(int orderId, int viewerId,
         string viewerName, string? viewerMail,
-        string viewerKind, int viewerDone,
-        List<TicketItem>? items, string state,
+        ViewerKind viewerKind, int viewerDone,
+        List<TicketItem>? items, DocState state,
         string currency, DateTime createdAt, bool sendMail)
     {
         if (items != null)
         {
             if (items.Count > 0)
             {
-                if (state == "new" || state == "paid")
+                if (state == DocState.New || state == DocState.Paid)
                 {
                     if (viewerMail != null &&
                         viewerMail.Contains("@"))
@@ -71,12 +61,12 @@ public class LegacyBookingProcessor
         }
 
         _tmpDiscount = 0m;
-        if (viewerKind == "vip")
+        if (viewerKind == ViewerKind.Vip)
         {
             _tmpDiscount = _tmpSum * PricingRules.VipRate;
             if (_tmpDiscount > PricingRules.MaxDiscount) _tmpDiscount = PricingRules.MaxDiscount;
         }
-        else if (viewerKind == "staff")
+        else if (viewerKind == ViewerKind.Staff)
         {
             _tmpDiscount = _tmpSum * PricingRules.StaffRate;
             if (_tmpDiscount > PricingRules.MaxDiscount) _tmpDiscount = PricingRules.MaxDiscount;
@@ -113,7 +103,7 @@ public class LegacyBookingProcessor
         return txt;
     }
 
-    public decimal Preview(string viewerKind, int viewerDone,
+    public decimal Preview(ViewerKind viewerKind, int viewerDone,
         List<TicketItem> items)
     {
         decimal s = 0m;
@@ -122,12 +112,12 @@ public class LegacyBookingProcessor
             s += it.Qty * it.Price;
         }
         decimal d = 0m;
-        if (viewerKind == "vip")
+        if (viewerKind == ViewerKind.Vip)
         {
             d = s * PricingRules.VipRate;
             if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
         }
-        else if (viewerKind == "staff")
+        else if (viewerKind == ViewerKind.Staff)
         {
             d = s * PricingRules.StaffRate;
             if (d > PricingRules.MaxDiscount) d = PricingRules.MaxDiscount;
@@ -145,8 +135,8 @@ public class LegacyBookingProcessor
     public string DescribeClient(Viewer c)
     {
         string s = c.Name.Trim().ToUpper();
-        if (c.Kind == "vip") s += " [VIP]";
-        if (c.DoneCount > PricingRules.LoyalOrders) s += " [ЛОЯЛЬНИЙ]";
+        if (c.Kind == ViewerKind.Vip) s += " [VIP]";
+        if (c.IsLoyal) s += " [ЛОЯЛЬНИЙ]";
         s += " <" + c.Email.ToLower() + ">";
         int years = DateTime.Now.Year - c.SinceUtc.Year;
         s += " стаж " + years;

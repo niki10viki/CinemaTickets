@@ -19,12 +19,12 @@ public class LegacyCharacterizationTests
     };
 
     [Theory]
-    [InlineData(null, "new", "a@b.c", "ERR: null")]
-    [InlineData("empty", "new", "a@b.c", "ERR: empty")]
-    [InlineData("two", "draft", "a@b.c", "ERR: state")]
-    [InlineData("two", "new", "no-mail", "ERR: mail")]
+    [InlineData(null, DocState.New, "a@b.c", "ERR: null")]
+    [InlineData("empty", DocState.New, "a@b.c", "ERR: empty")]
+    [InlineData("two", DocState.Draft, "a@b.c", "ERR: state")]
+    [InlineData("two", DocState.New, "no-mail", "ERR: mail")]
     public void Handle_BadInput_ReturnsErrorCode(
-        string? kindOfItems, string state, string mail,
+        string? kindOfItems, DocState state, string mail,
         string expected)
     {
         var items = kindOfItems switch
@@ -36,7 +36,7 @@ public class LegacyCharacterizationTests
         var sut = new LegacyBookingProcessor();
 
         var actual = sut.Handle(1001, 7, "Іван", mail,
-            "regular", 0, items, state, "UAH",
+            ViewerKind.Regular, 0, items, state, "UAH",
             new DateTime(2026, 3, 1), false);
 
         Assert.Equal(expected, actual);
@@ -48,7 +48,7 @@ public class LegacyCharacterizationTests
         var sut = new LegacyBookingProcessor();
 
         var report = sut.Handle(1001, 7, "Іван", "a@b.c",
-            "vip", 3, TwoLines(), "new", "UAH",
+            ViewerKind.Vip, 3, TwoLines(), DocState.New, "UAH",
             new DateTime(2026, 3, 1), false);
 
         var expected =
@@ -63,11 +63,11 @@ public class LegacyCharacterizationTests
     }
 
     [Theory]
-    [InlineData("regular", 0, 760)]
-    [InlineData("vip", 0, 655)]
-    [InlineData("staff", 0, 550)]
-    [InlineData("regular", 11, 725)]
-    public void Preview_ByKind_ReturnsTotal(string kind,
+    [InlineData(ViewerKind.Regular, 0, 760)]
+    [InlineData(ViewerKind.Vip, 0, 655)]
+    [InlineData(ViewerKind.Staff, 0, 550)]
+    [InlineData(ViewerKind.Regular, 11, 725)]
+    public void Preview_ByKind_ReturnsTotal(ViewerKind kind,
         int done, decimal expected)
     {
         var sut = new LegacyBookingProcessor();
@@ -86,7 +86,7 @@ public class LegacyCharacterizationTests
             new TicketItem { Seat = "C-3", Qty = 1, Price = 1000m }
         };
 
-        var total = sut.Preview("regular", 0, items);
+        var total = sut.Preview(ViewerKind.Regular, 0, items);
 
         Assert.Equal(1000m, total);
     }
@@ -100,7 +100,7 @@ public class LegacyCharacterizationTests
             new TicketItem { Seat = "D-4", Qty = 4, Price = 1000m }
         };
 
-        var total = sut.Preview("vip", 0, items);
+        var total = sut.Preview(ViewerKind.Vip, 0, items);
 
         Assert.Equal(3500m, total);
     }
@@ -112,7 +112,7 @@ public class LegacyCharacterizationTests
         {
             Name = "  іван  ",
             Email = "IVAN@MAIL.COM",
-            Kind = "vip",
+            Kind = ViewerKind.Vip,
             DoneCount = 12,
             SinceUtc = new DateTime(2020, 1, 1)
         };
