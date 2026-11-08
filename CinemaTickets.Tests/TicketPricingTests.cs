@@ -50,4 +50,14 @@ public class TicketPricingTests
 
         Assert.Equal(expectedParam, ex.ParamName);
     }
+
+    [Fact]
+    public void PriceFor_ChildComfortEvening_IsCappedAtHalfBase()
+    {
+        var pricing = new TicketPricing();
+
+        decimal actual = pricing.PriceFor(200m, 10, 18, true);
+
+        Assert.Equal(100m, actual);
+    }
 }
