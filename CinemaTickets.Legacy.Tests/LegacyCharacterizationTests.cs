@@ -18,6 +18,23 @@ public class LegacyCharacterizationTests
         new TicketItem { Seat = "B-2", Qty = 1, Price = 400m }
     };
 
+    private static BookingRequest Request(
+        List<TicketItem>? items, DocState state, string mail,
+        ViewerKind kind, int done) =>
+        new(1001,
+            new Viewer
+            {
+                Id = 7,
+                Name = "Іван",
+                Email = mail,
+                Kind = kind,
+                DoneCount = done
+            },
+            items, state, "UAH", false);
+
+    private static Viewer ViewerOf(ViewerKind kind, int done) =>
+        new() { Kind = kind, DoneCount = done };
+
     [Theory]
     [InlineData(null, DocState.New, "a@b.c", "ERR: null")]
     [InlineData("empty", DocState.New, "a@b.c", "ERR: empty")]
@@ -35,9 +52,8 @@ public class LegacyCharacterizationTests
         };
         var sut = new BookingProcessor();
 
-        var actual = sut.Handle(1001, 7, "Іван", mail,
-            ViewerKind.Regular, 0, items, state, "UAH",
-            new DateTime(2026, 3, 1), false);
+        var actual = sut.Handle(Request(items, state, mail,
+            ViewerKind.Regular, 0));
 
         Assert.Equal(expected, actual);
     }
@@ -47,9 +63,8 @@ public class LegacyCharacterizationTests
     {
         var sut = new BookingProcessor();
 
-        var report = sut.Handle(1001, 7, "Іван", "a@b.c",
-            ViewerKind.Vip, 3, TwoLines(), DocState.New, "UAH",
-            new DateTime(2026, 3, 1), false);
+        var report = sut.Handle(Request(TwoLines(), DocState.New,
+            "a@b.c", ViewerKind.Vip, 3));
 
         var expected =
             "Документ #1001\n" +
@@ -72,7 +87,7 @@ public class LegacyCharacterizationTests
     {
         var sut = new BookingProcessor();
 
-        var total = sut.Preview(kind, done, TwoLines());
+        var total = sut.Preview(ViewerOf(kind, done), TwoLines());
 
         Assert.Equal(expected, total);
     }
@@ -86,7 +101,7 @@ public class LegacyCharacterizationTests
             new TicketItem { Seat = "C-3", Qty = 1, Price = 1000m }
         };
 
-        var total = sut.Preview(ViewerKind.Regular, 0, items);
+        var total = sut.Preview(ViewerOf(ViewerKind.Regular, 0), items);
 
         Assert.Equal(1000m, total);
     }
@@ -100,7 +115,7 @@ public class LegacyCharacterizationTests
             new TicketItem { Seat = "D-4", Qty = 4, Price = 1000m }
         };
 
-        var total = sut.Preview(ViewerKind.Vip, 0, items);
+        var total = sut.Preview(ViewerOf(ViewerKind.Vip, 0), items);
 
         Assert.Equal(3500m, total);
     }

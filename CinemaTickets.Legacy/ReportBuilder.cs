@@ -4,20 +4,19 @@ namespace CinemaTickets.Legacy;
 
 public sealed class ReportBuilder
 {
-    public string Build(int orderId, string viewerName,
-        IReadOnlyList<TicketItem> items, string currency,
-        decimal discount, decimal shipping, decimal total)
+    public string Build(BookingRequest req, decimal discount,
+        decimal shipping, decimal total)
     {
         var sb = new StringBuilder();
-        sb.Append("Документ #").Append(orderId)
+        sb.Append("Документ #").Append(req.OrderId)
             .Append('\n');
-        sb.Append("Клієнт: ").Append(viewerName)
+        sb.Append("Клієнт: ").Append(req.Viewer.Name)
             .Append('\n');
-        foreach (var it in items)
-            sb.Append(Line(it, currency));
-        sb.Append(Money("Знижка", discount, currency));
-        sb.Append(Money("Доставка", shipping, currency));
-        sb.Append(Money("Разом", total, currency));
+        foreach (var it in req.Items!)
+            sb.Append(Line(it, req.Currency));
+        sb.Append(Money("Знижка", discount, req.Currency));
+        sb.Append(Money("Доставка", shipping, req.Currency));
+        sb.Append(Money("Разом", total, req.Currency));
         return sb.ToString();
     }
 

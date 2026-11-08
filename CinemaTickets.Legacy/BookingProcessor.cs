@@ -20,33 +20,28 @@ public class BookingProcessor
     private readonly ReportBuilder _report = new();
     private readonly List<string> _log = new();
 
-    public string Handle(int orderId, int viewerId,
-        string viewerName, string? viewerMail,
-        ViewerKind viewerKind, int viewerDone,
-        List<TicketItem>? items, DocState state,
-        string currency, DateTime createdAt, bool sendMail)
+    public string Handle(BookingRequest req)
     {
-        var error = Validate(items, state, viewerMail);
+        var error = Validate(req);
         if (error != null) return error;
-        _log.Add("ok " + orderId);
-        var lines = items!;
+        _log.Add("ok " + req.OrderId);
+        var lines = req.Items!;
 
         _tmpSum = Subtotal(lines);
-        _tmpDiscount = _discounts.For(_tmpSum, viewerKind, viewerDone);
+        _tmpDiscount = _discounts.For(_tmpSum, req.Viewer);
         decimal ship = _shipping.For(_tmpSum - _tmpDiscount);
         decimal total = _tmpSum - _tmpDiscount + ship;
 
-        string txt = _report.Build(orderId, viewerName, lines,
-            currency, _tmpDiscount, ship, total);
+        string txt = _report.Build(req, _tmpDiscount, ship, total);
 
-        if (sendMail)
+        if (req.SendMail)
         {
-            _log.Add("mail -> " + viewerMail);
+            _log.Add("mail -> " + req.Viewer.Email);
         }
         return txt;
     }
 
-    private static decimal Subtotal(List<TicketItem> items)
+    private static decimal Subtotal(IReadOnlyList<TicketItem> items)
     {
         decimal sum = 0m;
         foreach (var it in items)
@@ -56,23 +51,20 @@ public class BookingProcessor
         return sum;
     }
 
-    private static string? Validate(
-        List<TicketItem>? items, DocState state, string? viewerMail)
+    private static string? Validate(BookingRequest req)
     {
-        if (items is null) return "ERR: null";
-        if (items.Count == 0) return "ERR: empty";
-        if (state is not (DocState.New or DocState.Paid))
+        if (req.Items is null) return "ERR: null";
+        if (req.Items.Count == 0) return "ERR: empty";
+        if (req.State is not (DocState.New or DocState.Paid))
             return "ERR: state";
-        if (viewerMail is null || !viewerMail.Contains("@"))
-            return "ERR: mail";
+        if (!req.Viewer.HasValidEmail) return "ERR: mail";
         return null;
     }
 
-    public decimal Preview(ViewerKind viewerKind, int viewerDone,
-        List<TicketItem> items)
+    public decimal Preview(Viewer viewer, IReadOnlyList<TicketItem> items)
     {
         var subtotal = Subtotal(items);
-        var discount = _discounts.For(subtotal, viewerKind, viewerDone);
+        var discount = _discounts.For(subtotal, viewer);
         var payable = subtotal - discount;
         return payable + _shipping.For(payable);
     }

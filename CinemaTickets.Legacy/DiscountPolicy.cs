@@ -2,20 +2,20 @@ namespace CinemaTickets.Legacy;
 
 public sealed class DiscountPolicy
 {
-    public decimal For(decimal subtotal, ViewerKind kind, int doneCount)
+    public decimal For(decimal subtotal, Viewer viewer)
     {
-        var rate = RateFor(kind, doneCount);
+        var rate = RateFor(viewer);
         return Math.Min(subtotal * rate,
             PricingRules.MaxDiscount);
     }
 
-    private static decimal RateFor(ViewerKind kind, int doneCount)
+    private static decimal RateFor(Viewer viewer)
     {
-        return kind switch
+        return viewer.Kind switch
         {
             ViewerKind.Vip => PricingRules.VipRate,
             ViewerKind.Staff => PricingRules.StaffRate,
-            _ => doneCount > PricingRules.LoyalOrders ? PricingRules.LoyalRate : 0m
+            _ => viewer.IsLoyal ? PricingRules.LoyalRate : 0m
         };
     }
 }
