@@ -487,3 +487,8 @@ data/*.local.json
 # ЛР7: результати запусків тестів і HTML-звіт покриття не комітимо
 TestResults/
 coverage/
+
+# ЛР8: локальні налаштування й секрети не потрапляють до Git
+appsettings.Local.json
+**/*.secrets.json
+.env
