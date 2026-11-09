@@ -12,5 +12,8 @@
     <VersionPrefix>0.8.0</VersionPrefix>
     <Authors>Косенко Нікіта</Authors>
     <Product>CinemaTickets</Product>
+    <!-- аудит залежностей під час відновлення: вразливий пакет, зокрема транзитивний, ламає збірку -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
   </PropertyGroup>
 </Project>
