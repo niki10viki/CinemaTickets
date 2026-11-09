@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Отримати код
+        uses: actions/checkout@v5
+
+      # SDK 10 (global.json) читає рішення .slnx; середовище .NET 8 запускає тести net8.0
+      - name: Установити .NET 8 і SDK 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Відновити залежності
+        run: dotnet restore
+
+      - name: Перевірка форматування
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Складання Release з аналізаторами
+        run: dotnet build -c Release --no-restore
+
+      # поріг рахується для суми модулів: Program.cs — композиційний корінь без модульних тестів
+      - name: Тести й покриття
+        run: >
+          dotnet test -c Release --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutputFormat=cobertura
+          /p:Threshold=60 /p:ThresholdType=line /p:ThresholdStat=total
+
+      - name: Зберегти звіт про покриття
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: '**/coverage.cobertura.xml'

@@ -9,6 +9,40 @@ namespace CinemaTickets.App.Input;
 /// </summary>
 internal static class TicketLineParser
 {
+    /// <summary>Найбільший номер ряду в залі.</summary>
+    public const int MaxRow = 30;
+
+    /// <summary>Найбільший номер місця в ряду.</summary>
+    public const int MaxSeat = 40;
+
+    /// <summary>Найвища ціна квитка, грн: більша сума — майже напевно помилка введення.</summary>
+    public const decimal MaxPrice = 10_000m;
+
+    /// <summary>Найдовший рядок введення, символів.</summary>
+    public const int MaxLineLength = 40;
+
+    /// <summary>
+    /// Розбирає рядок «ряд місце ціна», введений у консолі.
+    /// </summary>
+    /// <param name="screeningId">Ідентифікатор поточного сеансу.</param>
+    /// <param name="raw">Рядок введення.</param>
+    /// <returns>Квиток або пояснення помилки введення.</returns>
+    public static Result<TicketLine> Parse(int screeningId, string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw) || raw.Length > MaxLineLength)
+        {
+            return Result<TicketLine>.Fail("Введіть ряд, місце й ціну через пробіл");
+        }
+
+        string[] parts = raw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 3)
+        {
+            return Result<TicketLine>.Fail("Потрібно три значення — ряд, місце, ціна");
+        }
+
+        return Parse(screeningId, parts[0], parts[1], parts[2]);
+    }
+
     /// <summary>
     /// Розбирає ряд, місце й ціну квитка.
     /// </summary>
@@ -24,19 +58,22 @@ internal static class TicketLineParser
         string? price)
     {
         CultureInfo culture = CultureInfo.CurrentCulture;
-        if (!int.TryParse(row, NumberStyles.Integer, culture, out int r) || r <= 0)
+        if (!int.TryParse(row, NumberStyles.Integer, culture, out int r) || r is < 1 or > MaxRow)
         {
-            return Result<TicketLine>.Fail("Ряд — ціле число більше 0");
+            return Result<TicketLine>.Fail(Text($"Ряд — ціле число від 1 до {MaxRow}"));
         }
 
-        if (!int.TryParse(seat, NumberStyles.Integer, culture, out int s) || s <= 0)
+        if (!int.TryParse(seat, NumberStyles.Integer, culture, out int s)
+            || s is < 1 or > MaxSeat)
         {
-            return Result<TicketLine>.Fail("Місце — ціле число більше 0");
+            return Result<TicketLine>.Fail(Text($"Місце — ціле число від 1 до {MaxSeat}"));
         }
 
-        if (!decimal.TryParse(price, NumberStyles.Number, culture, out decimal p) || p < 0)
+        if (!decimal.TryParse(price, NumberStyles.Number, culture, out decimal p)
+            || p is < 0m or > MaxPrice)
         {
-            return Result<TicketLine>.Fail("Ціна — невід'ємне число, дробова частина через кому");
+            return Result<TicketLine>.Fail(
+                Text($"Ціна — число від 0 до {MaxPrice:N0}, дробова частина через кому"));
         }
 
         return Result<TicketLine>.Ok(new TicketLine(screeningId, r, s, p));
@@ -64,4 +101,8 @@ internal static class TicketLineParser
 
         return valid;
     }
+
+    // межі в повідомленнях беруться з тих самих констант, що й у перевірках
+    private static string Text(FormattableString message) =>
+        message.ToString(CultureInfo.CurrentCulture);
 }
