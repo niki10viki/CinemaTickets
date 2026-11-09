@@ -60,20 +60,20 @@ internal static class TicketLineParser
         CultureInfo culture = CultureInfo.CurrentCulture;
         if (!int.TryParse(row, NumberStyles.Integer, culture, out int r) || r is < 1 or > MaxRow)
         {
-            return Result<TicketLine>.Fail("Ряд — ціле число від 1 до 30");
+            return Result<TicketLine>.Fail(Text($"Ряд — ціле число від 1 до {MaxRow}"));
         }
 
         if (!int.TryParse(seat, NumberStyles.Integer, culture, out int s)
             || s is < 1 or > MaxSeat)
         {
-            return Result<TicketLine>.Fail("Місце — ціле число від 1 до 40");
+            return Result<TicketLine>.Fail(Text($"Місце — ціле число від 1 до {MaxSeat}"));
         }
 
         if (!decimal.TryParse(price, NumberStyles.Number, culture, out decimal p)
             || p is < 0m or > MaxPrice)
         {
             return Result<TicketLine>.Fail(
-                "Ціна — число від 0 до 10 000, дробова частина через кому");
+                Text($"Ціна — число від 0 до {MaxPrice:N0}, дробова частина через кому"));
         }
 
         return Result<TicketLine>.Ok(new TicketLine(screeningId, r, s, p));
@@ -101,4 +101,8 @@ internal static class TicketLineParser
 
         return valid;
     }
+
+    // межі в повідомленнях беруться з тих самих констант, що й у перевірках
+    private static string Text(FormattableString message) =>
+        message.ToString(CultureInfo.CurrentCulture);
 }
