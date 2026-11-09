@@ -59,6 +59,29 @@ dotnet run --project CinemaTickets.App -- order [шлях-до-звіту]
 - Журнал аудиту `audit.log` створюється в поточному каталозі; файли `*.log` до
   репозиторію не потрапляють.
 
+## Безперервна інтеграція
+
+Конвеєр `.github/workflows/ci.yml` запускається на кожен push у `main` і `feature/**` та на
+кожен pull request до `main`. Збірку зупиняє будь-який непройдений критерій якості:
+
+| Крок | Команда | Що ламає збірку |
+| --- | --- | --- |
+| Форматування | `dotnet format --verify-no-changes` | відступи, порядок using, зауваження аналізаторів без автовиправлення |
+| Складання | `dotnet build -c Release` | будь-яке попередження CS, CA, SA, IDE (TreatWarningsAsErrors) |
+| Залежності | NuGetAudit під час відновлення | відомий вразливий пакет, зокрема транзитивний |
+| Тести | `dotnet test -c Release` | хоча б один червоний тест |
+| Покриття | coverlet, `/p:Threshold=60` | покриття рядків нижче за 60 % |
+
+Ті самі перевірки локально (у Git Bash замість `/p:` пишіть `-p:`):
+
+```bash
+dotnet format --verify-no-changes
+dotnet build -c Release
+dotnet test -c Release -p:CollectCoverage=true -p:Threshold=60 -p:ThresholdStat=total
+```
+
+Версію збірки задає `Directory.Build.props` (`VersionPrefix`), SDK — `global.json`.
+
 ## Документація
 
 - [docs/errors.md](docs/errors.md) — класифікація помилок і стратегії обробки.
