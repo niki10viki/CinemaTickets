@@ -71,15 +71,7 @@ internal sealed class OrderConsole
                 return true;
             }
 
-            string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 3)
-            {
-                _output.WriteLine("Помилка вводу: потрібно три значення — ряд, місце, ціна");
-                continue;
-            }
-
-            Result<TicketLine> parsed =
-                TicketLineParser.Parse(screeningId, parts[0], parts[1], parts[2]);
+            Result<TicketLine> parsed = TicketLineParser.Parse(screeningId, line);
             if (!parsed.IsSuccess)
             {
                 _output.WriteLine($"Помилка вводу: {parsed.Error}");
