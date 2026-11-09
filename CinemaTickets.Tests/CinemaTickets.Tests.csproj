@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CinemaTickets.Core\CinemaTickets.Core.csproj" />
+    <ProjectReference Include="..\CinemaTickets.App\CinemaTickets.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>

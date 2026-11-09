@@ -16,4 +16,8 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CinemaTickets.Tests" />
+  </ItemGroup>
+
 </Project>
